@@ -38,3 +38,6 @@ punto_vivo/static/uploads/*
 # Recursos de terceros que no se suben al repo público
 assets/backgrounds/*.mp4
 assets/Stiker GTA 6/
+
+.vercel
+.env*

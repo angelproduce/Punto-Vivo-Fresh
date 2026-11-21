@@ -167,6 +167,22 @@ def run() -> None:
 
     # Limpieza del producto de prueba
     anonimo.delete(f"/api/admin/productos/{pid}", headers=admin_headers())
+
+    # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
+    from punto_vivo import config as pv_config
+    _serverless_antes = pv_config.IS_SERVERLESS
+    _db_antes = pv_config.DB_PATH
+    _ruta_serverless = Path(TMP) / "no-debe-crearse" / "db.sqlite3"
+    try:
+        pv_config.IS_SERVERLESS = True
+        pv_config.DB_PATH = _ruta_serverless
+        pv_config.ensure_dirs()
+        check("34. ensure_dirs omite mkdir en serverless",
+              not _ruta_serverless.parent.exists())
+    finally:
+        pv_config.IS_SERVERLESS = _serverless_antes
+        pv_config.DB_PATH = _db_antes
+
     print("-" * 52)
     print(f"RESULTADO: {passed} pruebas superadas.\n")
 

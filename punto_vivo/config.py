@@ -26,6 +26,13 @@ SUPABASE_SERVICE_ROLE_KEY = os.getenv("PV_SUPABASE_SERVICE_ROLE_KEY", "").strip(
 SUPABASE_BUCKET = os.getenv("PV_SUPABASE_BUCKET", "menu-images").strip() or "menu-images"
 TRUST_PROXY = os.getenv("PV_TRUST_PROXY", "0").strip() == "1"
 
+# Vercel monta el código en /var/task (solo lectura). Detectar el entorno
+# serverless evita que el arranque intente crear directorios y tumbe la app.
+IS_SERVERLESS = bool(
+    os.getenv("VERCEL")
+    or os.getenv("AWS_LAMBDA_FUNCTION_NAME")
+)
+
 
 def supabase_enabled() -> bool:
     """True solo cuando hay URL y clave de servicio (nunca se envían al navegador)."""
@@ -90,7 +97,13 @@ def now_local() -> datetime:
 
 def ensure_dirs() -> None:
     """En producción Supabase guarda la base y las fotos: no hay disco que crear."""
-    if supabase_enabled():
+    if supabase_enabled() or IS_SERVERLESS:
+        # Vercel tiene /var/task en solo lectura. Crear 'state' aquí rompería
+        # la importación de app.py y haría que /healthz devolviera 500.
         return
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        # Filesystem de solo lectura: la persistencia debe estar en Supabase.
+        return
