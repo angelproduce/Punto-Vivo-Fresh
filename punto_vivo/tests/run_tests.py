@@ -168,6 +168,8 @@ def run() -> None:
     # Limpieza del producto de prueba
     anonimo.delete(f"/api/admin/productos/{pid}", headers=admin_headers())
 
+    check("35. Logo presente en la interfaz", "/static/logo.png" in anonimo.get("/bienvenida").text)
+
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
     _serverless_antes = pv_config.IS_SERVERLESS
