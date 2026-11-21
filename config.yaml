@@ -1,0 +1,110 @@
+# ---------------------------------------------------------------------------
+# ANGEL PRODUCE IA · configuración
+# Puedes editar a mano. La interfaz también lee estos valores.
+# ---------------------------------------------------------------------------
+
+project:
+  niche: "general"
+  language: "es"
+  # Duración de cada short: se pide 90 s y nunca sale de 60-120 s.
+  target_duration: 90
+  min_duration: 60
+  max_duration: 120
+  brand: ""                  # p. ej. "@tucanal" (se muestra pequeño arriba)
+  closing: "¿Te parece? Comenta."   # texto de cierre del short
+
+script:
+  # auto = usa el primer proveedor con clave: Gemini → ChatGPT → GitHub Models.
+  # También puedes forzar: gemini | openai | github | template
+  provider: "gemini"
+  provider_order: ["gemini", "openai", "github"]
+  topics_file: "topics.yaml"
+  research: true             # busca noticias/datos actuales antes de escribir
+  research_sources: ["news", "youtube", "wikipedia"]
+  research_per_source: 4
+  research_timeout: 20       # segundos máximos de investigación
+  gemini_model: "gemini-3.8-flash"
+  timeout: 240               # segundos máximos esperando al proveedor de IA
+  openai_model: "gpt-4o-mini"
+  github_model: "openai/gpt-4o-mini"
+  ollama_url: "http://127.0.0.1:11434"
+  ollama_model: "llama3.1:8b"
+
+voice:
+  # auto   = voz rápida gratis (Edge) y, si falla, tu voz clonada en el PC
+  # edge   = solo voz rápida (no es tu voz clonada)
+  # local  = solo tu voz clonada en el PC (mucho más lento: ~30 min por short)
+  provider: "edge"
+  space_id: "Qwen/Qwen3-TTS-Demo"
+  space_voice: "Bodega / 西班牙语-博德加"
+  space_language: "Spanish / 西班牙语"
+  # Voces gratuitas latinoamericanas: es-MX-DaliaNeural, es-MX-JorgeNeural, es-MX-NuriaNeural, es-CO-SalomeNeural, es-AR-ElenaNeural
+  edge_voice: "es-MX-JorgeNeural"
+  edge_rate: "+30%"
+  edge_pitch: "+6Hz"
+  model_local: "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+  ref_audio: "assets/voice/reference.wav"
+  ref_text: "assets/voice/reference.txt"
+  x_vector_only: true        # clonación por timbre (no necesita transcripción)
+  speed: 1.3
+  pause_ms: 150
+  tone: "breaking"
+  chunk_chars: 240           # corta el guion en trozos de este tamaño
+  local_fallback: true
+
+captions:
+  enabled: true
+  model: "base"              # tiny | base | small | medium (base = más rápido)
+  max_words: 3
+  font: "Arial Black"
+  size: 82
+  outline: 6
+  margin_v: 430              # altura desde abajo (1080x1920)
+
+media:
+  source: "auto"
+  query: "actualidad noticias"   # solo si el guion no trae escenas
+  max_clips: 12
+  youtube_max: 4                 # descargas de YouTube por vídeo (fragmentos reales)
+
+graphics:
+  # Motor modular de graficos (overlays y fondos). HyperFrames es opcional.
+  # provider: none | auto | svg | hyperframes | lottie | remotion
+  #   svg         = SVG/CSS (titulos, lower-thirds, ticker, stats) via navegador; fallback FFmpeg
+  #   hyperframes = fondos animados HTML (requiere HyperFrames instalado)
+  #   lottie      = animaciones Lottie (requiere assets/graphics/lottie/*.json y navegador)
+  #   remotion    = graficos React/Remotion (requiere proyecto en assets/graphics/remotion)
+  #   auto        = elige el mejor motor disponible
+  provider: "auto"
+  # style: auto | documental | periodistico | cinematografico | tecnologico | videojuegos | stats
+  style: "auto"
+  quality: "looks"           # draft (rapido) | looks (buena) | delivery (maxima)
+  seconds: 10                # duracion de cada plantilla renderizada (HyperFrames)
+
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  crf: 20
+  preset: "veryfast"
+  hook_seconds: 4.0
+  transition_seconds: 0.45   # duración de cada transición entre escenas
+  voice_lufs: -13.0          # voz clara y fuerte (antes -16)
+  voice_tp: -1.0             # pico real máximo de la voz
+  sfx_enabled: true          # golpes suaves en los cambios de escena
+  sfx_db: -20
+  music: ""                  # p. ej. "assets/music/lofi.mp3"
+  music_db: 2  # ganancia final sobre la música normalizada (UI: -20 a +12)
+  music_intro_db: 0.5  # realce muy leve en los primeros segundos (profesional)
+  music_intro_fade: 0.2  # rampa de bajada al empezar la narración
+  music_fade_in: 0.05  # fundido de entrada para que no golpee
+  frame_template: "gta6"  # marco decorativo: "gta6", "alofoke3", "angelproduce" o vacío (sin marco)
+
+publish:
+  platforms: ["youtube", "tiktok"]
+  auto_publish: false
+  youtube:
+    token: "state/youtube_token.json"
+    client_secret: "state/client_secret.json"
+  tiktok:
+    token: "state/tiktok_token.json"

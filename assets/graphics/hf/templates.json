@@ -1,0 +1,13 @@
+{
+  "templates": [
+    { "id": "aurora", "title": "Aurora", "tags": ["oscuro", "neón"] },
+    { "id": "mesh-gradient", "title": "Malla de color", "tags": ["degradado", "suave"] },
+    { "id": "plasma", "title": "Plasma", "tags": ["color", "orgánico"] },
+    { "id": "flowing-gradient", "title": "Degradado en flujo", "tags": ["degradado", "limpio"] },
+    { "id": "fractal-noise", "title": "Ruido fractal", "tags": ["textura", "tecnología"] },
+    { "id": "godrays", "title": "Rayos de luz", "tags": ["luz", "cinemático"] },
+    { "id": "voronoi", "title": "Celdas Voronoi", "tags": ["tecnología", "geométrico"] },
+    { "id": "blob", "title": "Manchas orgánicas", "tags": ["color", "suave"] },
+    { "id": "stripes", "title": "Rayas", "tags": ["minimal", "blanco y negro"] }
+  ]
+}

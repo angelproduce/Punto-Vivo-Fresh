@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Bienvenido · PUNTO VIVO FRESH{% endblock %}
+{% block body %}
+<div class="welcome-shell">
+  <section class="welcome-hero">
+    <div class="hero-photo" aria-hidden="true"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="brand brand-light">
+        <span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5c-9.5 0-16 4.2-16 11a5.5 5.5 0 0 0 5.5 5.5c6.8 0 11-6.5 10.5-16.5Z" fill="currentColor" opacity=".92"/><path d="M4 20c2.5-5 6-8.2 11-10.5" fill="none" stroke="#0b3b2e" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <span><strong>PUNTO VIVO</strong><em>FRESH</em></span>
+      </div>
+      <div class="hero-copy">
+        <span class="pill pill-yellow">🌿 Comida rápida y bebidas</span>
+        <h1>Sabor fresco,<br><span>siempre cerca de ti.</span></h1>
+        <p>Regístrate para entrar al menú digital de Punto Vivo Fresh. Tu visita queda registrada automáticamente.</p>
+      </div>
+      <div class="hero-foot">
+        <div><strong>🥗</strong><span>Productos frescos</span></div>
+        <div><strong>⚡</strong><span>Atención rápida</span></div>
+        <div><strong>📱</strong><span>Menú digital</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="welcome-form-side">
+    <div class="form-card" id="form-card">
+      <div class="form-card-top">
+        <span class="eyebrow">ACCESO AL MENÚ</span>
+        <h2>¡Hola! Bienvenido 👋</h2>
+        <p>Ingresa tus datos para registrar tu visita y explorar nuestro menú.</p>
+        {% if request.query_params.get("motivo") == "requerido" %}
+          <div class="notice notice-warn">Para ver el menú, completa primero el registro.</div>
+        {% endif %}
+      </div>
+
+      <form id="visita-form" novalidate autocomplete="on">
+        <label for="full_name">Nombre completo</label>
+        <div class="input-wrap">
+          <span class="input-icon" aria-hidden="true">👤</span>
+          <input id="full_name" name="full_name" type="text" placeholder="Ej. Juan Pérez"
+                 autocomplete="name" maxlength="100" required>
+        </div>
+        <small class="field-error" id="err-full_name"></small>
+
+        <label for="phone">Número de teléfono</label>
+        <div class="input-wrap">
+          <span class="input-icon" aria-hidden="true">📞</span>
+          <input id="phone" name="phone" type="tel" inputmode="numeric"
+                 placeholder="Ej. 809 000 0000" autocomplete="tel" maxlength="20" required>
+        </div>
+        <small class="field-error" id="err-phone"></small>
+
+        <label class="consent" for="consent">
+          <input type="checkbox" id="consent" name="consent" required>
+          <span>Acepto el <button type="button" class="link-button" id="open-privacy">aviso de privacidad</button> y el uso de mis datos para registrar mi visita.</span>
+        </label>
+        <small class="field-error" id="err-consent"></small>
+
+        <!-- Campo oculto anti-bots: debe quedar vacío -->
+        <div class="honeypot" aria-hidden="true"><label for="website">No completar</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+
+        <div class="msg" id="form-msg" role="alert" hidden></div>
+
+        <button class="btn btn-primary btn-block" id="submit-btn" type="submit">
+          <span class="btn-label">ENTRAR AL MENÚ</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+        <p class="form-foot">🔒 Tus datos se usan únicamente para el control de visitas del negocio.</p>
+      </form>
+    </div>
+    <p class="copyright">© PUNTO VIVO FRESH · Todos los derechos reservados</p>
+  </section>
+</div>
+
+<dialog id="privacy-dialog" class="dialog">
+  <div class="dialog-head">
+    <h3>Aviso de privacidad</h3>
+    <button type="button" class="icon-btn" id="close-privacy" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="dialog-body">
+    <p>En <strong>PUNTO VIVO FRESH</strong> recopilamos únicamente tu nombre completo y número de teléfono para:</p>
+    <ul>
+      <li>Identificarte como cliente y registrar cada visita realizada al local.</li>
+      <li>Llevar un historial individual de visitas con fecha y hora.</li>
+      <li>Generar estadísticas agregadas del negocio.</li>
+    </ul>
+    <p>Tu información se almacena de forma segura en la base de datos del negocio y no se comparte con terceros ni se muestra en estadísticas públicas. Puedes solicitar la eliminación de tus datos contactando al administrador del establecimiento.</p>
+    <p>Al enviar el formulario confirmas que aceptas este aviso.</p>
+  </div>
+  <div class="dialog-foot"><button type="button" class="btn btn-primary" id="accept-privacy">Entendido</button></div>
+</dialog>
+
+<script src="/static/js/public.js" defer></script>
+{% endblock %}

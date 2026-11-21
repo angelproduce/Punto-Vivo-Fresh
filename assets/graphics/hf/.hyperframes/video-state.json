@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "historyId": "773b03d9-bf90-4a53-8fff-2b4a8cf43e74",
+  "currentRevision": "1b7d7a24-9c50-43de-b107-5610748f30f5",
+  "pendingChanges": false,
+  "files": {
+    "compositions/aurora.html": {
+      "hash": "4212fdd4247fdac65c7fd07dcb60a9e545deca4e53f098c314e904762b980ed5",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\42\\4212fdd4247fdac65c7fd07dcb60a9e545deca4e53f098c314e904762b980ed5"
+    },
+    "compositions/blob.html": {
+      "hash": "51f9d8aac23f3e70b2c3f2f8c2e6b28855b294d2070faaf3c2b4670d45d39094",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\51\\51f9d8aac23f3e70b2c3f2f8c2e6b28855b294d2070faaf3c2b4670d45d39094"
+    },
+    "compositions/flowing-gradient.html": {
+      "hash": "61097d65a12801cf216063d61bc68f9552972482d098d06f0894df00d79c37f3",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\61\\61097d65a12801cf216063d61bc68f9552972482d098d06f0894df00d79c37f3"
+    },
+    "compositions/fractal-noise.html": {
+      "hash": "aceed3511f0ea12324731ec41d112d14e207880050790c7561224e63c6d38dc5",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\ac\\aceed3511f0ea12324731ec41d112d14e207880050790c7561224e63c6d38dc5"
+    },
+    "compositions/godrays.html": {
+      "hash": "865c83ba1a0507ad1e11930cfe66f495a050276ad8ad29c899009f7ca901ec4d",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\86\\865c83ba1a0507ad1e11930cfe66f495a050276ad8ad29c899009f7ca901ec4d"
+    },
+    "compositions/lib/shaders.THIRD-PARTY-LICENSES.txt": {
+      "hash": "ace6fbd142afaa20894b285ab6d4e20f164f6ec8557978d23db36197f1bc067c",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\ac\\ace6fbd142afaa20894b285ab6d4e20f164f6ec8557978d23db36197f1bc067c"
+    },
+    "compositions/marble.html": {
+      "hash": "75d657d3bcb12ccda74550460600993a05c33b26841b3eb7d345710b14cc21aa",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\75\\75d657d3bcb12ccda74550460600993a05c33b26841b3eb7d345710b14cc21aa"
+    },
+    "compositions/mesh-gradient.html": {
+      "hash": "3ded7936d2b5f0c8029876e50439dff7d6a6515d6e6a9e85b71a63893f03f95b",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\3d\\3ded7936d2b5f0c8029876e50439dff7d6a6515d6e6a9e85b71a63893f03f95b"
+    },
+    "compositions/plasma.html": {
+      "hash": "22be72c98dcf2209874ac96bb3cc6404e01088d798892f7703cdc547ed9bb2f4",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\22\\22be72c98dcf2209874ac96bb3cc6404e01088d798892f7703cdc547ed9bb2f4"
+    },
+    "compositions/ripples.html": {
+      "hash": "a1b9bc57f785c8d2ae68dd44d477247aace537ae87384a527aa0dfb741d36cb8",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\a1\\a1b9bc57f785c8d2ae68dd44d477247aace537ae87384a527aa0dfb741d36cb8"
+    },
+    "compositions/stripes.html": {
+      "hash": "03bfa501d1c00aca8e3ca89ece97a88db365d91eae96bf5671351eeae46d3e67",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\03\\03bfa501d1c00aca8e3ca89ece97a88db365d91eae96bf5671351eeae46d3e67"
+    },
+    "compositions/swirl.html": {
+      "hash": "952d3a310ce8b27667517b250137ebac4d455d747038b03f7a65ec6145f8c089",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\95\\952d3a310ce8b27667517b250137ebac4d455d747038b03f7a65ec6145f8c089"
+    },
+    "compositions/voronoi.html": {
+      "hash": "694eb85a27ffda2d7a4a729cfad0fce2c2e47cc86dbb32536c16e4fd0261b555",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\69\\694eb85a27ffda2d7a4a729cfad0fce2c2e47cc86dbb32536c16e4fd0261b555"
+    },
+    "hyperframes.json": {
+      "hash": "53dbce1e19aa713cbb12ee0bc4d206143b45ab15e6ffbfcaa8f69572d4d24d50",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\53\\53dbce1e19aa713cbb12ee0bc4d206143b45ab15e6ffbfcaa8f69572d4d24d50"
+    },
+    "index.html": {
+      "hash": "4fc0d7d264bf6abc1541bba904b7dfd794efd12dfb4aed53e8881ee27c5e5da0",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\4f\\4fc0d7d264bf6abc1541bba904b7dfd794efd12dfb4aed53e8881ee27c5e5da0"
+    },
+    "package.json": {
+      "hash": "a9cfba5c9d83a9a74850cb813adc9f737409c302b599e0de2619d05d115ee9f3",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\a9\\a9cfba5c9d83a9a74850cb813adc9f737409c302b599e0de2619d05d115ee9f3"
+    },
+    "templates.json": {
+      "hash": "b7a108c4055785c93e9c88f273015ced74681585075f45e79b095350390279df",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\b7\\b7a108c4055785c93e9c88f273015ced74681585075f45e79b095350390279df"
+    },
+    "compositions/lib/shaders.iife.js": {
+      "hash": "6ad60b5fe00c6f092ddc9ccc6138743d89401e2886d550b275fc8ce0d0345f2d",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\6a\\6ad60b5fe00c6f092ddc9ccc6138743d89401e2886d550b275fc8ce0d0345f2d"
+    },
+    "compositions/strands.html": {
+      "hash": "ddf4d58f79fd505f4b1a2aa1c13313e550ccdcbcf7ae468d80adfa65e6d7a59d",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\dd\\ddf4d58f79fd505f4b1a2aa1c13313e550ccdcbcf7ae468d80adfa65e6d7a59d"
+    },
+    "compositions/sun-burst.html": {
+      "hash": "af65b3438c8d0e42acbadc67b33dcef00877214ad08a27944024017aab56a302",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\af\\af65b3438c8d0e42acbadc67b33dcef00877214ad08a27944024017aab56a302"
+    },
+    "compositions/worley-noise.html": {
+      "hash": "f0e5e07502373793e59bb6f896e9b81ff13e99416fd0592bd337c467f045d299",
+      "content": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\f0\\f0e5e07502373793e59bb6f896e9b81ff13e99416fd0592bd337c467f045d299"
+    }
+  },
+  "revisions": {
+    "1b7d7a24-9c50-43de-b107-5610748f30f5": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1793076918879,
+      "endedAt": 1793076920012,
+      "files": {
+        "compositions/strands.html": {
+          "before": null,
+          "after": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\dd\\ddf4d58f79fd505f4b1a2aa1c13313e550ccdcbcf7ae468d80adfa65e6d7a59d"
+        },
+        "compositions/sun-burst.html": {
+          "before": null,
+          "after": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\af\\af65b3438c8d0e42acbadc67b33dcef00877214ad08a27944024017aab56a302"
+        },
+        "compositions/worley-noise.html": {
+          "before": null,
+          "after": "C:\\Users\\angel\\.cache\\hyperframes\\history\\773b03d9-bf90-4a53-8fff-2b4a8cf43e74\\blobs\\f0\\f0e5e07502373793e59bb6f896e9b81ff13e99416fd0592bd337c467f045d299"
+        }
+      }
+    }
+  },
+  "checks": {
+    "latest": null,
+    "revisions": {},
+    "unversioned": []
+  },
+  "snapshots": {
+    "latest": null,
+    "revisions": {},
+    "unversioned": []
+  },
+  "renders": {
+    "latest": {
+      "id": "a3167a3c-5d63-4877-ba45-d974d84f575c",
+      "completedAt": 1793243362484,
+      "output": "C:\\Users\\angel\\Documents\\Default Project\\.cache\\graphics\\ripples-10s-207bc46a11.mp4",
+      "status": "completed",
+      "revision": "1b7d7a24-9c50-43de-b107-5610748f30f5"
+    },
+    "retainedRevisions": [
+      "1b7d7a24-9c50-43de-b107-5610748f30f5"
+    ]
+  },
+  "pendingArtifactCleanup": []
+}

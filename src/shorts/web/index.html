@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07080c">
+<title>ANGEL PRODUCE IA · Estudio de vídeo</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<svg class="sprite" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5-11-6.5Z" fill="currentColor"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2.5 14 9l6.5 2-6.5 2-2 6.5L10 13 3.5 11 10 9l2-6.5Z" fill="currentColor"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></g></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="2.8" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"/></g></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9M4 12h3M11 12h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/><circle cx="7" cy="12" r="0"/></g></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4.5 15v3.5a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V15"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h3.2l2 2.4h7.8a2 2 0 0 1 2 2v7.6a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-10Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><g fill="currentColor"><rect x="7" y="5" width="3.6" height="14" rx="1.4"/><rect x="13.4" y="5" width="3.6" height="14" rx="1.4"/></g></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9.5h3l4.5-4v13L7 14.5H4z" fill="currentColor" stroke="none"/><path d="M16 8.5a5 5 0 0 1 0 7M18.8 6a9 9 0 0 1 0 12"/></g></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4h-4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-8.5 8.5"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></g></symbol>
+</svg>
+
+<div class="aurora aurora-1"></div>
+<div class="aurora aurora-2"></div>
+<div class="aurora aurora-3"></div>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><svg><use href="#i-play"/></svg></div>
+      <div class="brand-text"><strong>ANGEL PRODUCE IA</strong><span>Estudio de vídeo</span></div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <button class="nav-item is-active" data-tab="create"><svg><use href="#i-spark"/></svg><span>Crear</span></button>
+      <button class="nav-item" data-tab="review"><svg><use href="#i-grid"/></svg><span>Revisar</span><em class="nav-badge hidden" id="badge-pending">0</em></button>
+      <button class="nav-item" data-tab="voice"><svg><use href="#i-mic"/></svg><span>Mi voz</span></button>
+      <button class="nav-item" data-tab="gta"><svg><use href="#i-spark"/></svg><span>GTA Media</span></button>
+      <button class="nav-item" data-tab="ytclips"><svg><use href="#i-spark"/></svg><span>YouTube Clips</span></button>
+     <button class="nav-item" data-tab="settings"><svg><use href="#i-sliders"/></svg><span>Ajustes</span></button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="side-card" id="side-voice">
+        <div class="side-card-top"><span class="dot" id="side-voice-dot"></span><strong>Voz</strong></div>
+        <p id="side-voice-text">Cargando…</p>
+      </div>
+      <p class="fineprint">Todo local · <span id="version">v0</span></p>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="title-block">
+        <h1 id="page-title">Crear</h1>
+        <p id="page-sub">Tu voz, tus temas, tus shorts. Sin salir del PC.</p>
+      </div>
+      <div class="pills">
+        <span class="pill" id="pill-engine"><i></i><span>voz</span></span>
+        <span class="pill" id="pill-topics"><i></i><span>Vídeos ilimitados</span></span>
+        <span class="pill" id="pill-disk"><i></i><span>disco</span></span>
+      </div>
+    </header>
+
+    <!-- ---------------------------------------------------------- CREAR -->
+    <section class="view is-active" id="view-create">
+      <div class="split">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>Generar un short</h2>
+              <p class="sub">Guion, voz clonada, subtítulos y montaje automático.</p>
+            </div>
+            <span class="chip">1080×1920 · 30 fps</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Cuántos</span>
+            <div class="segmented" id="count-seg" data-value="1">
+              <button type="button" data-value="1" class="is-active">1</button>
+              <button type="button" data-value="2">2</button>
+              <button type="button" data-value="3">3</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Duración</span>
+            <div class="segmented" id="duration-seg">
+              <button type="button" data-value="60">1 min</button>
+              <button type="button" data-value="90" class="is-active">1:30</button>
+              <button type="button" data-value="120">2 min</button>
+            </div>
+            <small class="hint">Entre 60 y 120 segundos por vídeo.</small>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Fondos</span>
+            <select id="bg-source" class="select">
+              <option value="mixed">Mixto (local + internet)</option>
+              <option value="local">Solo locales</option>
+              <option value="internet">Solo internet (Unsplash/Pixabay)</option>
+            </select>
+            <small class="hint">Mixto combina tus fondos locales con imágenes/videos de internet según el tema.</small>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Tus imágenes o vídeos <span class="field-opt">opcional</span></span>
+            <div class="dropzone dropzone-sm" id="resource-drop" tabindex="0" role="button">
+              <input type="file" id="resource-input" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm,video/x-matroska" multiple hidden>
+              <div class="drop-icon"><svg><use href="#i-upload"/></svg></div>
+              <strong>Arrastra archivos o haz clic aquí</strong>
+              <p>JPG, PNG, WEBP, MP4, MOV, MKV o WEBM · hasta 20 archivos</p>
+              <div class="drop-progress hidden" id="resource-progress"><div></div></div>
+            </div>
+            <div class="resource-list" id="resource-list"></div>
+            <small class="hint" id="resource-hint">Opcional: si no subes nada, se buscan fondos automáticamente.</small>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Tema del vídeo</span>
+            <div class="search-wrap" style="position:relative">
+              <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.6"><use href="#i-search"/></svg>
+              <input type="text" id="topic-input" class="input search-input" placeholder="Escribe el tema… (vacío = rotación automática)" style="padding-left:40px">
+            </div>
+            <small class="hint" id="topic-hint"></small>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Fuentes web <span class="field-opt">opcional</span></span>
+            <div class="source-add">
+              <input type="text" id="source-input" class="input source-input" inputmode="url" autocomplete="off" placeholder="Pega un enlace: https://…">
+              <button class="btn btn-ghost btn-sm" id="btn-add-source" type="button">Añadir</button>
+            </div>
+            <div class="source-list" id="source-list"></div>
+            <small class="hint">Leo la página y uso su información para el guion. Hasta 5 enlaces. Si la web bloquea la lectura, te lo diré al fallar.</small>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Guion manual <span class="field-opt">opcional</span></span>
+            <textarea id="script-input" class="input script-input" rows="7" maxlength="30000" spellcheck="true" placeholder="Escribe o pega el guion tal como quieres que se narre. Si lo rellenas, manda sobre el tema y los enlaces."></textarea>
+            <div class="script-meta">
+              <small class="hint">Cada frase o línea será una escena; la primera sirve de entrada. Si generas varios shorts, se aplica al primero.</small>
+              <span class="script-count mono" id="script-count">0 caracteres · ~0 s</span>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn-ghost btn-sm" id="btn-clear-script" type="button">Limpiar guion</button>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-lg" id="btn-run">
+            <svg><use href="#i-spark"/></svg> Generar short
+          </button>
+          <button class="btn btn-ghost btn-lg" id="btn-auto" style="margin-top:8px;width:100%">
+            <svg><use href="#i-spark"/></svg> Modo automático: OFF
+          </button>
+          <p class="hint center" id="estimate-hint">Calculando tiempo estimado…</p>
+          <p class="hint center" id="auto-hint">Activa el modo automático para generar shorts sin parar (tema, duración y cantidad por defecto).</p>
+
+          <div class="voice-warning hidden" id="voice-warning">
+            <svg><use href="#i-mic"/></svg>
+            <div>
+              <strong>Falta tu voz de referencia</strong>
+              <p>Sin ella no se puede generar nada. Súbela en <button class="link" data-tab="voice">Mi voz</button>.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card job-card">
+          <div class="job-idle" id="job-idle">
+            <div class="orb"><svg><use href="#i-play"/></svg></div>
+            <h3 id="job-idle-title">Todo listo para crear</h3>
+            <p class="sub" id="job-idle-sub">Cada short tarda unos minutos. Puedes seguir usando la interfaz.</p>
+            <div class="idle-stats">
+              <div><strong id="stat-pending">0</strong><span>por revisar</span></div>
+              <div><strong id="stat-topics">0</strong><span>temas en rotación</span></div>
+              <div><strong id="stat-last">—</strong><span>último short</span></div>
+            </div>
+          </div>
+
+          <div class="job-run hidden" id="job-run">
+            <div class="job-top">
+              <span class="dot pulse"></span>
+              <strong id="job-label">Generando…</strong>
+              <span class="time mono" id="job-time">0:00</span>
+            </div>
+            <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="job-meta">
+              <span id="job-step">Paso 1 de 6</span>
+              <span id="job-eta"></span>
+            </div>
+            <ol class="steps" id="steps">
+              <li data-step="1"><i></i><span>Guion</span></li>
+              <li data-step="2"><i></i><span>Voz clonada</span></li>
+              <li data-step="3"><i></i><span>Fondos</span></li>
+              <li data-step="4"><i></i><span>Subtítulos</span></li>
+              <li data-step="5"><i></i><span>Montaje</span></li>
+              <li data-step="6"><i></i><span>En cola</span></li>
+            </ol>
+            <details class="log-wrap" open>
+              <summary>Detalle</summary>
+              <pre class="log" id="log"></pre>
+            </details>
+            <button class="btn btn-ghost btn-sm" id="btn-cancel">Cancelar</button>
+          </div>
+
+          <div class="job-done hidden" id="job-done">
+            <div class="done-icon"><svg><use href="#i-check"/></svg></div>
+            <h3>Short listo</h3>
+            <p class="sub" id="job-done-sub">Ya está en la cola de revisión.</p>
+            <div class="done-actions">
+              <button class="btn btn-ghost" id="btn-go-review">Ver en Revisar</button>
+              <button class="btn btn-primary" id="btn-again">Crear otro</button>
+            </div>
+          </div>
+
+          <div class="job-done hidden" id="job-fail">
+            <div class="done-icon error"><svg><use href="#i-x"/></svg></div>
+            <h3>No se pudo terminar</h3>
+            <p class="sub" id="job-fail-sub">Revisa el detalle.</p>
+            <details class="log-wrap">
+              <summary>Detalle</summary>
+              <pre class="log" id="fail-log"></pre>
+            </details>
+            <div class="done-actions">
+              <button class="btn btn-primary" id="btn-retry">Reintentar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------------- REVISAR -->
+    <section class="view" id="view-review">
+      <div class="card">
+        <div class="queue-bar">
+          <div class="segmented" id="queue-seg" data-value="pending">
+            <button type="button" data-value="pending">Pendientes <em id="count-pending">0</em></button>
+            <button type="button" data-value="approved">Aprobados <em id="count-approved">0</em></button>
+            <button type="button" data-value="published">Publicados <em id="count-published">0</em></button>
+          </div>
+          <div class="queue-actions">
+            <button class="btn btn-ghost btn-sm" id="btn-approve-all">Aprobar todo</button>
+            <button class="btn btn-ghost btn-sm" id="btn-publish-dry">Simular</button>
+            <button class="btn btn-primary btn-sm" id="btn-publish">Publicar</button>
+          </div>
+        </div>
+        <div class="queue-grid" id="queue-grid"></div>
+        <div class="empty hidden" id="queue-empty">
+          <div class="empty-icon"><svg><use href="#i-grid"/></svg></div>
+          <h3>Nada por aquí todavía</h3>
+          <p id="empty-text">Genera tu primer short y aparecerá en esta cola.</p>
+          <button class="btn btn-primary btn-sm" data-tab="create">Crear un short</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------ VOZ -->
+    <section class="view" id="view-voice">
+      <div class="split">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>Tu voz de referencia</h2>
+              <p class="sub">La uso para clonar tu timbre en cada short.</p>
+            </div>
+            <span class="chip" id="voice-chip">—</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Motor de voz</span>
+            <select id="voice-provider" class="select">
+              <option value="local">Tu voz clonada (lenta, ~30 min/short)</option>
+              <option value="edge">Rápida y latinoamericana (Edge, ~2 min/short)</option>
+              <option value="auto">Automático (Edge y, si falla, clonada)</option>
+              <option value="elevenlabs">ElevenLabs (requiere API key)</option>
+            </select>
+            <small class="hint" id="voice-provider-hint">Clonada = tu voz. Edge = latinoamericana y rápida.</small>
+          </div>
+          <div class="field">
+            <span class="field-label">Voz Edge (latinoamericana)</span>
+            <select id="edge-voice" class="select">
+              <option value="es-MX-DaliaNeural">Dalia (mujer, México - neutral)</option>
+              <option value="es-MX-JorgeNeural">Jorge (hombre, México)</option>
+              <option value="es-MX-NuriaNeural">Nuria (mujer, México)</option>
+              <option value="es-CO-SalomeNeural">Salomé (mujer, Colombia)</option>
+              <option value="es-AR-ElenaNeural">Elena (mujer, Argentina)</option>
+            </select>
+          </div>
+          <div class="field">
+            <span class="field-label">Tono de voz (noticias)</span>
+            <select id="voice-tone" class="select">
+              <option value="breaking">Última hora (intensa, rápida, urgente)</option>
+              <option value="narrative">Narrativo (pausado, profesional)</option>
+              <option value="motivational">Motivacional (energético)</option>
+              <option value="calm">Calmado (suave)</option>
+            </select>
+          </div>
+          <div class="dropzone" id="dropzone" tabindex="0" role="button">
+            <input type="file" id="voice-input" accept="audio/*" hidden>
+            <div class="drop-icon"><svg><use href="#i-upload"/></svg></div>
+            <strong>Arrastra un audio o haz clic aquí</strong>
+            <p>m4a, mp3, wav, ogg · 10-20 segundos hablando normal</p>
+            <div class="drop-progress hidden" id="drop-progress"><div></div></div>
+          </div>
+
+          <div class="voice-player hidden" id="voice-player">
+            <button class="play-btn" id="voice-play"><svg><use href="#i-play"/></svg></button>
+            <div class="voice-meta">
+              <strong id="voice-name">reference.wav</strong>
+              <span id="voice-details">—</span>
+            </div>
+            <audio id="voice-audio" preload="metadata"></audio>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Cómo grabar (bien)</h2>
+          <ul class="tips">
+            <li><span>1</span><div><strong>15 segundos, sin prisa</strong><p>Habla como en el vídeo: tono normal, sin leer robotizado.</p></div></li>
+            <li><span>2</span><div><strong>Silencio alrededor</strong><p>Sin música ni ventilador. El micro del móvil suele bastar.</p></div></li>
+            <li><span>3</span><div><strong>Siempre el mismo micro</strong><p>Cambiar de micro cambia el sonido de tu voz.</p></div></li>
+          </ul>
+          <div class="note">
+            <svg><use href="#i-sound"/></svg>
+            <p>Puedes probar tu clon generando un short de 1 y escuchándolo. Si no te convence, sube otra grabación: se reemplaza al instante.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------- AJUSTES -->
+    <section class="view" id="view-gta">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>GTA Media Center</h2>
+            <p class="sub">Noticias, imágenes y videos de GTA 6 y Rockstar Games.</p>
+          </div>
+          <div class="row-actions">
+            <input type="text" id="gta-query" class="input" placeholder="Buscar (ej. GTA 6 trailer)" value="GTA 6" style="width:260px">
+            <select id="gta-sort" class="select" style="width:140px">
+              <option value="relevance">Relevancia</option>
+              <option value="date">Fecha</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="btn-gta-search">Buscar</button>
+            <button class="btn btn-ghost btn-sm" id="btn-gta-test">Probar conexión</button>
+          </div>
+        </div>
+
+        <div class="settings-tabs" id="gta-tabs">
+          <button class="tab is-active" data-tab="news">Noticias</button>
+          <button class="tab" data-tab="images">Imágenes</button>
+          <button class="tab" data-tab="videos">Videos</button>
+        </div>
+
+        <div class="settings-panel is-active" data-panel="news">
+          <div class="rows" id="gta-news"></div>
+        </div>
+        <div class="settings-panel" data-panel="images">
+          <div class="rows" id="gta-images"></div>
+        </div>
+        <div class="settings-panel" data-panel="videos">
+          <div class="rows" id="gta-videos"></div>
+        </div>
+
+        <div class="row-actions" style="margin-top:14px">
+          <button class="btn btn-primary" id="btn-gta-generate">Generar Short desde noticias</button>
+          <span class="hint" id="gta-status"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------- YOUTUBE CLIPS -->
+    <section class="view" id="view-ytclips">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>YouTube Clips (estilo OpusClip)</h2>
+            <p class="sub">Genera clips cortos con subtítulos desde un enlace de YouTube o desde un vídeo que subas.</p>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Enlace o búsqueda de YouTube</span>
+          <input type="text" id="yt-url" class="input" placeholder="https://www.youtube.com/watch?v=... o texto de búsqueda">
+        </div>
+        <div class="field">
+          <span class="field-label">O sube tu vídeo <span class="field-opt">opcional</span></span>
+          <div class="dropzone dropzone-sm" id="yt-video-drop" tabindex="0" role="button">
+            <input type="file" id="yt-video-input" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-m4v" hidden>
+            <div class="drop-icon"><svg><use href="#i-upload"/></svg></div>
+            <strong>Arrastra un vídeo o haz clic aquí</strong>
+            <p>MP4, MOV, MKV, WEBM o M4V · hasta 300 MB</p>
+            <div class="drop-progress hidden" id="yt-video-progress"><div></div></div>
+          </div>
+          <div class="resource-list" id="yt-video-list"></div>
+          <small class="hint" id="yt-video-hint">Si eliges un vídeo subido, se usa en lugar del enlace.</small>
+        </div>
+        <div class="field">
+          <span class="field-label">Cantidad de clips</span>
+          <div class="segmented" id="yt-count-seg" data-value="1">
+            <button type="button" data-value="1" class="is-active">1</button>
+            <button type="button" data-value="3">3</button>
+            <button type="button" data-value="5">5</button>
+            <button type="button" data-value="8">8</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Duración del clip</span>
+          <div class="segmented" id="yt-dur-seg" data-value="60">
+            <button type="button" data-value="60" class="is-active">1 min</button>
+            <button type="button" data-value="120">2 min</button>
+            <button type="button" data-value="180">3 min</button>
+            <button type="button" data-value="240">4 min</button>
+            <button type="button" data-value="300">5 min</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Subtítulos</span>
+          <div class="segmented" id="yt-subs-seg" data-value="1">
+            <button type="button" data-value="1" class="is-active">Mostrar texto</button>
+            <button type="button" data-value="0">No mostrar texto</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-lg" id="btn-yt-generate">Generar clips</button>
+        <p class="hint center" id="yt-progress"></p>
+        <div class="rows" id="yt-results" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-settings">
+      <div class="settings-tabs" id="settings-tabs">
+        <button class="tab is-active" data-tab="social">🌐 Redes sociales</button>
+        <button class="tab" data-tab="zernio">Zernio</button>
+        <button class="tab" data-tab="publish">📤 Publicación automática</button>
+        <button class="tab" data-tab="audio">🎚️ Audio</button>
+        <button class="tab" data-tab="marcos">🖼️ Marcos</button>
+        <button class="tab" data-tab="ai">🤖 Inteligencia artificial</button>
+        <button class="tab" data-tab="security">🛡️ Seguridad</button>
+        <button class="tab" data-tab="status">📊 Estado de conexiones</button>
+      </div>
+
+      <div class="settings-panel is-active" data-panel="social">
+        <div class="card">
+          <h2>Redes sociales (OAuth)</h2>
+          <p class="hint">Conecta tus cuentas con autorización oficial. Primero guarda el Client ID y Client Secret de cada plataforma; después pulsa «Conectar».</p>
+          <div class="rows" id="oauth-rows"></div>
+          <div class="divider"></div>
+          <h3 style="margin-top:12px">Cuentas conectadas</h3>
+          <div class="rows" id="oauth-connections"></div>
+        </div>
+      </div>
+
+      <div class="settings-panel" data-panel="zernio">
+        <div class="card">
+          <h2>Zernio (publicacion unificada)</h2>
+          <p class="hint">Un solo API key para publicar en 16+ redes. Consiguelo en https://zernio.com</p>
+          <div class="rows" id="zernio-rows"></div>
+          <div class="row-actions" style="margin-top:14px">
+            <input type="password" id="zernio-key-input" placeholder="Pega tu API key aqui" style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)">
+            <button class="btn btn-primary btn-sm" id="btn-zernio-save">Guardar</button>
+            <button class="btn btn-ghost btn-sm" id="btn-zernio-test">Probar conexion</button>
+          </div>
+          <p class="hint" id="zernio-hint"></p>
+          <div class="divider"></div>
+          <h3 style="margin-top:12px">Cuentas conectadas</h3>
+          <div class="rows" id="zernio-accounts"></div>
+        </div>
+      </div>
+      <div class="settings-panel" data-panel="publish">
+        <div class="card">
+          <h2>Publicación automática</h2>
+          <p class="hint">Configura el piloto automático desde aquí o con <code>run.cmd autopilot</code>.</p>
+          <div class="rows" id="autopilot-rows"></div>
+        </div>
+      </div>
+
+      <div class="settings-panel" data-panel="audio">
+        <div class="card">
+          <h2>Ajustes de la música</h2>
+          <p class="hint">Controla el volumen y cómo entra la música. La voz mantiene prioridad. Pulsa <strong>Guardar ajustes</strong>; se aplica al siguiente vídeo.</p>
+          <div style="display:flex;flex-direction:column;gap:14px;margin-top:12px">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span>Volumen general</span>
+                <span class="mono" id="music-volume-val">+3 dB</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <button class="btn btn-ghost btn-sm" id="music-minus" title="Bajar música">−</button>
+                <input type="range" id="music-volume" min="-20" max="12" step="1" value="3" style="flex:1">
+                <button class="btn btn-ghost btn-sm" id="music-plus" title="Subir música">+</button>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span>Realce de entrada <span class="hint">(primeros 4 s)</span></span>
+                <span class="mono" id="music-intro-db-val">+1.5 dB</span>
+              </div>
+              <input type="range" id="music-intro-db" min="0" max="12" step="0.5" value="1.5" style="width:100%">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span>Fundido de entrada</span>
+                <span class="mono" id="music-fade-in-val">0.30 s</span>
+              </div>
+              <input type="range" id="music-fade-in" min="0" max="1.5" step="0.05" value="0.3" style="width:100%">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span>Bajada a la narración</span>
+                <span class="mono" id="music-intro-fade-val">0.70 s</span>
+              </div>
+              <input type="range" id="music-intro-fade" min="0.2" max="3" step="0.1" value="0.7" style="width:100%">
+            </div>
+          </div>
+          <div class="row-actions" style="margin-top:12px">
+            <button class="btn btn-sm" id="btn-music-save"><svg><use href="#i-check"/></svg> Guardar ajustes</button>
+            <span class="hint" id="music-hint"></span>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h2>Intensidad de la voz</h2>
+          <p class="hint">Controla qué tan intensa y rápida suena la voz (-10% = más calmada, +40% = más urgente).</p>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+            <input type="range" id="voice-intensity" min="-10" max="40" step="1" value="18" style="flex:1">
+            <span class="mono" id="voice-intensity-val">+18%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-panel" data-panel="marcos">
+        <div class="card">
+          <h2>Marco del vídeo</h2>
+          <p class="hint">Se dibuja encima del vídeo en los próximos shorts y deja libre el centro. Elige uno o desactívalo: se guarda al instante.</p>
+          <div class="frame-grid" id="frame-grid"></div>
+          <p class="hint" id="frame-hint"></p>
+        </div>
+      </div>
+
+      <div class="settings-panel" data-panel="ai">
+        <div class="card">
+          <h2>Inteligencia artificial</h2>
+          <p class="hint">Proveedor de guion, investigación y duración. Se edita en <code>config.yaml</code> o con las claves de arriba.</p>
+          <div class="rows" id="ai-rows"></div>
+          <div class="divider"></div>
+          <h3 style="margin-top:12px">Proveedor de guion</h3>
+          <div class="row-actions" style="margin-top:10px">
+            <select id="script-provider" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)">
+              <option value="openai">ChatGPT (OpenAI)</option>
+              <option value="gemini">Gemini (Google)</option>
+              <option value="github">GitHub Models</option>
+              <option value="auto">Automático</option>
+              <option value="template">Plantillas locales</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="btn-save-script-provider">Guardar</button>
+          </div>
+          <p class="hint" id="script-provider-hint"></p>
+          <div class="divider"></div>
+          <h3 style="margin-top:12px">Claves de IA</h3>
+          <p class="hint">Pega la clave de OpenAI para que ChatGPT escriba los guiones. Se guarda en tu equipo (.env) y nunca se muestra en la interfaz.</p>
+          <div class="rows" id="api-rows"></div>
+          <div class="row-actions" style="margin-top:12px">
+            <button class="btn btn-primary btn-sm" id="btn-save-keys">Guardar claves</button>
+          </div>
+          <p class="hint" id="keys-hint"></p>
+        </div>
+      </div>
+
+      <div class="settings-panel" data-panel="security">
+        <div class="card">
+          <h2>Seguridad</h2>
+          <p class="hint">Credenciales cifradas, renovación de tokens, revocación de conexiones.</p>
+          <div class="rows" id="security-rows"></div>
+        </div>
+      </div>
+
+      <div class="settings-panel" data-panel="status">
+        <div class="card">
+          <h2>Sistema</h2>
+          <div class="rows" id="system-rows"></div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h2>Plataformas</h2>
+          <div class="platforms" id="platforms"></div>
+          <div class="divider"></div>
+          <h2>Carpetas</h2>
+          <div class="row-actions">
+            <button class="btn btn-ghost btn-sm" data-open-dir="output"><svg><use href="#i-folder"/></svg> Vídeos</button>
+            <button class="btn btn-ghost btn-sm" data-open-dir="queue/pending"><svg><use href="#i-folder"/></svg> Cola</button>
+            <button class="btn btn-ghost btn-sm" data-open-dir="logs"><svg><use href="#i-folder"/></svg> Registros</button>
+          </div>
+          <div class="divider"></div>
+          <button class="btn btn-danger btn-sm" id="btn-shutdown">Salir de ANGEL PRODUCE IA</button>
+          <p class="hint">Cierra el servidor local. Puedes volver a abrirlo con el acceso directo.</p>
+        </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Graficas de los videos</h2>
+        <p class="hint">HyperFrames anima los fondos en HTML y los renderiza en vertical. La primera vez que se usa una plantilla tarda ~1 min; despues queda guardada.</p>
+        <div class="tags" id="graphics-tags"></div>
+        <div class="row-actions" style="margin-top:14px">
+          <button class="btn btn-ghost btn-sm" id="btn-graphics-more"><svg><use href="#i-spark"/></svg> Instalar mas plantillas</button>
+          <span class="hint" id="graphics-hint"></span>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>OpenMontage (producción agéntica)</h2>
+        <p class="hint">Sistema externo de producción de vídeo con IA (github.com/calesthio/OpenMontage). Requiere Python 3.10+, Node.js 18+, FFmpeg y un asistente de IA. No se incluye por defecto.</p>
+        <div class="row-actions" style="margin-top:10px">
+          <button class="btn btn-ghost btn-sm" id="btn-openmontage-open">Abrir repositorio</button>
+          <button class="btn btn-ghost btn-sm" id="btn-openmontage-setup">Ver instrucciones</button>
+        </div>
+        <p class="hint" id="openmontage-hint"></p>
+      </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ------------------------------------------------------------- MODAL -->
+<div class="modal hidden" id="modal" aria-hidden="true">
+  <div class="modal-backdrop" data-close="1"></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <button class="icon-btn modal-close" data-close="1" aria-label="Cerrar"><svg><use href="#i-x"/></svg></button>
+    <div class="modal-video"><video id="modal-video" controls playsinline preload="metadata"></video></div>
+    <div class="modal-body">
+      <div class="modal-head">
+        <span class="chip" id="modal-badge">Pendiente</span>
+        <span class="mono muted" id="modal-duration">0:00</span>
+      </div>
+      <h2 id="modal-title">—</h2>
+      <p class="muted" id="modal-desc"></p>
+      <div class="tags" id="modal-tags"></div>
+      <details class="modal-script">
+        <summary>Guion completo</summary>
+        <p id="modal-script-text"></p>
+      </details>
+      <div class="modal-actions">
+        <button class="btn btn-danger btn-sm" id="modal-reject">Descartar</button>
+        <button class="btn btn-ghost btn-sm" id="modal-delete">Eliminar</button>
+        <button class="btn btn-ghost btn-sm" id="modal-folder">Abrir carpeta</button>
+        <button class="btn btn-primary" id="modal-approve">Aprobar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="confirm" aria-hidden="true">
+  <div class="modal-backdrop" data-close="1"></div>
+  <div class="confirm-panel" role="dialog" aria-modal="true">
+    <h3 id="confirm-title">¿Seguro?</h3>
+    <p id="confirm-text" class="muted"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="confirm-no">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-yes">Sí, continuar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

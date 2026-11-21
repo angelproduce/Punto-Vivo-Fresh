@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Menú digital · PUNTO VIVO FRESH{% endblock %}
+{% block body %}
+<header class="public-header">
+  <div class="public-header-inner">
+    <div class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5c-9.5 0-16 4.2-16 11a5.5 5.5 0 0 0 5.5 5.5c6.8 0 11-6.5 10.5-16.5Z" fill="currentColor" opacity=".92"/><path d="M4 20c2.5-5 6-8.2 11-10.5" fill="none" stroke="#0b3b2e" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <span><strong>PUNTO VIVO</strong><em>FRESH</em></span>
+    </div>
+    <div class="header-actions">
+      <span class="visit-chip" id="visit-chip">🎟️ Visita registrada</span>
+      <button class="btn btn-ghost btn-sm" id="share-menu" type="button">↗ Compartir menú</button>
+    </div>
+  </div>
+</header>
+
+<main class="menu-main">
+  <section class="menu-hero">
+    <div class="menu-hero-text">
+      <span class="pill pill-yellow">MENÚ DIGITAL</span>
+      <h1>Elige tu <span>favorito</span> de hoy</h1>
+      <p>Encuentra algo fresco y delicioso para cada momento. Toca un producto para ver los detalles.</p>
+    </div>
+    <div class="menu-hero-art" aria-hidden="true">🍔🥤🥗</div>
+  </section>
+
+  <div class="demo-notice" id="demo-notice">
+    <span>ℹ️</span>
+    <p><strong>Datos de demostración:</strong> los productos, descripciones y precios mostrados son ejemplos. El administrador cargará la información real del negocio.</p>
+  </div>
+
+  <section class="menu-toolbar" aria-label="Búsqueda y filtros">
+    <div class="search-wrap">
+      <span aria-hidden="true">🔍</span>
+      <input type="search" id="search" placeholder="Buscar producto…" aria-label="Buscar productos">
+    </div>
+    <div class="cat-chips" id="cat-chips"><button class="chip is-active" data-cat="all">Todo</button></div>
+  </section>
+
+  <div class="results-line"><span id="result-count">Cargando productos…</span></div>
+  <section class="product-grid" id="product-grid" aria-live="polite"></section>
+  <div class="empty-state" id="empty-state" hidden>
+    <div>🔎</div><h3>No encontramos productos</h3><p>Prueba con otra búsqueda o selecciona otra categoría.</p>
+  </div>
+</main>
+
+<footer class="public-footer">
+  <div class="brand brand-light"><span class="brand-mark">🌿</span><span><strong>PUNTO VIVO</strong><em>FRESH</em></span></div>
+  <p>Fresco, rápido y hecho para ti. © PUNTO VIVO FRESH</p>
+</footer>
+
+<dialog id="product-dialog" class="dialog dialog-product">
+  <button type="button" class="dialog-close" id="close-product" aria-label="Cerrar">✕</button>
+  <div id="product-detail"></div>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+<script src="/static/js/public.js" defer></script>
+{% endblock %}

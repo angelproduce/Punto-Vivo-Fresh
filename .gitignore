@@ -1,0 +1,39 @@
+# todo lo pesado y generado se queda fuera
+.venv/
+tools/
+.cache/
+output/
+queue/
+logs/
+state/
+
+# secretos: nunca subir entornos reales ni credenciales
+.env
+.env.*
+!.env.example
+!.env.production.example
+*.key
+*.pem
+*.pfx
+*.tmp
+
+__pycache__/
+*.pyc
+*.spec
+*.egg-info/
+build/
+dist/
+assets/voice/reference.wav
+assets/voice/reference.txt
+ShortsAI.exe
+ANGEL PRODUCE IA.exe
+PUNTO VIVO FRESH.exe
+*.sqlite3
+*.db
+.vercel/
+punto_vivo/static/uploads/*
+!punto_vivo/static/uploads/.gitkeep
+
+# Recursos de terceros que no se suben al repo público
+assets/backgrounds/*.mp4
+assets/Stiker GTA 6/

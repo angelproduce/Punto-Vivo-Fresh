@@ -1,0 +1,33 @@
+# Render Blueprint · PUNTO VIVO FRESH
+# Render asigna PORT automáticamente (no fijar 8790 aquí).
+# Las variables marcadas con sync: false se rellenan en el dashboard de Render.
+services:
+  - type: web
+    name: punto-vivo-fresh
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-punto.txt
+    startCommand: uvicorn punto_vivo.app:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PV_TRUST_PROXY
+        value: "1"
+      - key: PV_SUPABASE_BUCKET
+        value: menu-images
+      - key: PV_SUPABASE_URL
+        sync: false
+      - key: PV_SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PV_SECRET_KEY
+        sync: false
+      - key: PV_ADMIN_EMAIL
+        sync: false
+      - key: PV_ADMIN_PASSWORD
+        sync: false
+      # Dejar vacío hasta conocer la URL HTTPS definitiva; luego rellenar y redeploy.
+      - key: PV_PUBLIC_BASE_URL
+        value: ""
