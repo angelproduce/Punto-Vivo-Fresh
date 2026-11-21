@@ -165,7 +165,7 @@ def healthz() -> dict[str, str]:
 @app.get(WELCOME_PATH, response_class=HTMLResponse)
 def bienvenida(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
-        "bienvenida.html", public_context(request, menu_path=MENU_PATH)
+        request, "bienvenida.html", public_context(request, menu_path=MENU_PATH)
     )
 
 
@@ -232,7 +232,7 @@ def api_visita_actual(request: Request) -> dict[str, Any]:
 def menu(request: Request) -> Response:
     if not require_visitor(request):
         return RedirectResponse(WELCOME_PATH + "?motivo=requerido", status_code=302)
-    return templates.TemplateResponse("menu.html", public_context(request))
+    return templates.TemplateResponse(request, "menu.html", public_context(request))
 
 
 @app.get("/api/menu")
@@ -274,7 +274,7 @@ def api_producto(producto_id: int, request: Request) -> dict[str, Any]:
 def admin_login_page(request: Request) -> Response:
     if security.get_session(request.cookies.get(ADMIN_COOKIE)):
         return RedirectResponse("/admin", status_code=302)
-    return templates.TemplateResponse("admin_login.html", public_context(request))
+    return templates.TemplateResponse(request, "admin_login.html", public_context(request))
 
 
 @app.post("/api/admin/login")
@@ -322,7 +322,7 @@ def admin_page(request: Request) -> Response:
     if session is None:
         return RedirectResponse("/admin/login", status_code=302)
     return templates.TemplateResponse(
-        "admin.html", public_context(request, admin_email=session["email"], csrf=session["csrf_token"])
+        request, "admin.html", public_context(request, admin_email=session["email"], csrf=session["csrf_token"])
     )
 
 
