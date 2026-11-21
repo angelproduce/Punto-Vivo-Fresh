@@ -228,3 +228,21 @@ grant execute on function public.pv_allow_event(text, text, double precision, in
 insert into storage.buckets (id, name, public)
 values ('menu-images', 'menu-images', true)
 on conflict (id) do nothing;
+
+-- ------------------------------------------------ permisos del servidor -----
+-- La service_role key necesita privilegios explícitos. En proyectos nuevos
+-- los GRANT por defecto no siempre se aplican y PostgREST responde 42501.
+grant usage on schema public to service_role;
+
+grant select, insert, update, delete on
+  public.customers,
+  public.visits,
+  public.categories,
+  public.products,
+  public.admins,
+  public.admin_sessions,
+  public.rate_events,
+  public.pv_meta
+to service_role;
+
+grant usage, select on all sequences in schema public to service_role;
