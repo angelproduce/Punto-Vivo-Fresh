@@ -50,6 +50,11 @@ def startup() -> None:
 # ------------------------------------------------------------------ helpers
 
 def client_ip(request: Request) -> str:
+    """IP real del visitante detrás de Vercel/Render, para no compartir el límite."""
+    if TRUST_PROXY:
+        forwarded = request.headers.get("x-forwarded-for", "")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "desconocido"
 
 
@@ -346,13 +351,15 @@ def api_admin_login(payload: LoginIn, request: Request) -> JSONResponse:
     if not origin_ok(request):
         raise HTTPException(status_code=403, detail="Origen no permitido.")
     client_hash = security.ip_hash(client_ip(request))
-    if not security.allow_login(client_hash):
+    if security.login_bloqueado(client_hash):
         raise HTTPException(status_code=429, detail="Demasiados intentos. Espera una hora.")
 
     row = repository.get_admin_by_email(payload.email.strip().lower())
     if row is None or not security.verify_password(payload.password, row["password_hash"]):
+        security.registrar_fallo_login(client_hash)
         raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos.")
 
+    security.limpiar_intentos_login(client_hash)
     token, csrf = security.create_session(row["id"])
     response = JSONResponse({"ok": True, "csrf_token": csrf, "email": row["email"]})
     response.set_cookie(

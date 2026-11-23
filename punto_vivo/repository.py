@@ -538,34 +538,71 @@ def allow_visit(client_hash: str, phone_hash: str) -> bool:
         conn.close()
 
 
-def allow_login(client_hash: str) -> bool:
-    now = time.time()
-    cutoff = now - 3600
+LOGIN_MAX_INTENTOS = 10
+LOGIN_VENTANA_SEG = 3600
+
+
+def login_attempts(client_hash: str) -> int:
+    """Solo consulta: cuenta los fallos recientes sin consumir intento."""
+    cutoff = time.time() - LOGIN_VENTANA_SEG
     if supabase_enabled():
-        return bool(_rpc("pv_allow_event", {
-            "p_scope": "login_ip", "p_key_hash": client_hash,
-            "p_created_epoch": now, "p_max": 10, "p_cutoff": cutoff,
+        return len(_rows("rate_events", {
+            "scope": "eq.login_ip",
+            "key_hash": f"eq.{client_hash}",
+            "created_epoch": "gt.%.3f" % cutoff,
+            "select": "id",
         }))
     conn = db.connect()
     try:
+        return conn.execute(
+            "SELECT COUNT(*) FROM rate_events WHERE scope='login_ip' AND key_hash=? AND created_epoch>?",
+            (client_hash, cutoff),
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+
+def register_login_failure(client_hash: str) -> None:
+    """Registra únicamente un intento fallido (el RPC ya aplica el tope)."""
+    now = time.time()
+    cutoff = now - LOGIN_VENTANA_SEG
+    if supabase_enabled():
+        _rpc("pv_allow_event", {
+            "p_scope": "login_ip", "p_key_hash": client_hash,
+            "p_created_epoch": now, "p_max": LOGIN_MAX_INTENTOS, "p_cutoff": cutoff,
+        })
+        return
+    conn = db.connect()
+    try:
         conn.execute("BEGIN IMMEDIATE")
-        conn.execute("DELETE FROM rate_events WHERE created_epoch < ?", (cutoff - 3600,))
+        conn.execute("DELETE FROM rate_events WHERE created_epoch < ?", (cutoff - LOGIN_VENTANA_SEG,))
         attempts = conn.execute(
             "SELECT COUNT(*) FROM rate_events WHERE scope='login_ip' AND key_hash=? AND created_epoch>?",
             (client_hash, cutoff),
         ).fetchone()[0]
-        if attempts >= 10:
-            conn.rollback()
-            return False
-        conn.execute(
-            "INSERT INTO rate_events(scope, key_hash, created_epoch) VALUES('login_ip',?,?)",
-            (client_hash, now),
-        )
+        if attempts < LOGIN_MAX_INTENTOS:
+            conn.execute(
+                "INSERT INTO rate_events(scope, key_hash, created_epoch) VALUES('login_ip',?,?)",
+                (client_hash, now),
+            )
         conn.commit()
-        return True
     except Exception:
         conn.rollback()
-        return False
+    finally:
+        conn.close()
+
+
+def clear_login_attempts(client_hash: str) -> None:
+    """Un login correcto deja sin efecto los fallos anteriores de esa IP."""
+    if supabase_enabled():
+        supabase_request("DELETE", "/rest/v1/rate_events", params={
+            "scope": "eq.login_ip", "key_hash": f"eq.{client_hash}",
+        })
+        return
+    conn = db.connect()
+    try:
+        conn.execute("DELETE FROM rate_events WHERE scope='login_ip' AND key_hash=?", (client_hash,))
+        conn.commit()
     finally:
         conn.close()
 

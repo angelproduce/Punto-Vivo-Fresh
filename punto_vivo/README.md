@@ -55,6 +55,8 @@ En la cabecera del panel, el botón **📱 Modo móvil / 🖥️ Modo escritorio
 
 El sitio es instalable: en el menú pulsa **📲 Instalar app**. Si el navegador no muestra la opción, usa su menú → «Añadir a pantalla de inicio» (en iPhone: **Compartir → Añadir a pantalla de inicio**).
 
+El límite de acceso solo cuenta intentos fallidos: 10 contraseñas incorrectas por IP en una hora. Un inicio de sesión correcto reinicia el contador, y detrás de Vercel se usa la IP real de `X-Forwarded-For`.
+
 ---
 
 ## 2. Configuración

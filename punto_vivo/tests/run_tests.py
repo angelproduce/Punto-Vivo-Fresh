@@ -50,6 +50,20 @@ def reset_ventana() -> None:
     conn.close()
 
 
+def limpiar_intentos_login() -> None:
+    conn = db.connect()
+    conn.execute("DELETE FROM rate_events WHERE scope='login_ip'")
+    conn.commit()
+    conn.close()
+
+
+def eventos_login() -> int:
+    conn = db.connect()
+    total = conn.execute("SELECT COUNT(*) FROM rate_events WHERE scope='login_ip'").fetchone()[0]
+    conn.close()
+    return total
+
+
 def registrar(nombre: str, telefono: str, token: str):
     return client.post("/api/visita", json={
         "full_name": nombre, "phone": telefono, "consent": True,
@@ -149,6 +163,25 @@ def run() -> None:
     acceso_nuevo = verificar.post("/api/admin/login",
                                   json={"email": "segundo2@pruebas.local", "password": "ClavePropia123!"})
     check("8m. La nueva contraseña propia funciona", acceso_nuevo.status_code == 200, acceso_nuevo.text)
+
+    # 8n: el límite cuenta solo fallos y un login correcto lo limpia
+    limpiar_intentos_login()
+    cliente_limite = TestClient(app)
+    estados = []
+    for _ in range(11):
+        fallo = cliente_limite.post("/api/admin/login", json={"email": ADMIN_EMAIL, "password": "clave-mala"})
+        estados.append(fallo.status_code)
+    check("8n. Diez fallos permitidos y el undécimo bloqueado",
+          estados[:10] == [401] * 10 and estados[10] == 429, str(estados))
+    check("8o. Quedan registrados 10 fallos", eventos_login() == 10)
+    correcta_bloqueada = cliente_limite.post(
+        "/api/admin/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASS})
+    check("8p. Login correcto sigue bloqueado hasta limpiar", correcta_bloqueada.status_code == 429)
+    limpiar_intentos_login()
+    desbloqueada = cliente_limite.post(
+        "/api/admin/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASS})
+    check("8q. Login correcto no consume intentos y limpia los fallos",
+          desbloqueada.status_code == 200 and eventos_login() == 0, desbloqueada.text)
 
     # 7: QR siempre al formulario + formatos
     info = anonimo.get("/api/admin/qr/info", headers=admin_headers()).json()

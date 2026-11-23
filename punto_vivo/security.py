@@ -136,8 +136,26 @@ def allow_visit(client_hash: str, phone: str) -> bool:
     return repository.allow_visit(client_hash, _sha256(phone))
 
 
-def allow_login(client_hash: str) -> bool:
-    return repository.allow_login(client_hash)
+def login_bloqueado(client_hash: str) -> bool:
+    """Solo cuenta fallos; un login correcto no consume intentos."""
+    try:
+        return repository.login_attempts(client_hash) >= repository.LOGIN_MAX_INTENTOS
+    except Exception:
+        return False
+
+
+def registrar_fallo_login(client_hash: str) -> None:
+    try:
+        repository.register_login_failure(client_hash)
+    except Exception:
+        pass
+
+
+def limpiar_intentos_login(client_hash: str) -> None:
+    try:
+        repository.clear_login_attempts(client_hash)
+    except Exception:
+        pass
 
 
 def _sha256(value: str) -> str:
