@@ -57,7 +57,7 @@ El sitio es instalable en dos apps independientes:
 - **Menú del negocio:** en el menú público pulsa **📲 Instalar app**. Al abrirla aparece el registro y el menú digital.
 - **Panel administrativo:** en la pantalla de acceso o dentro del panel pulsa **📲 Instalar panel**. Al abrirla aparece el acceso; si ya tienes sesión iniciada, entra directo al panel.
 
-Si el navegador no muestra la opción de instalación, usa su menú → «Añadir a pantalla de inicio» (en iPhone: **Compartir → Añadir a pantalla de inicio**). Puedes tener ambas apps en la pantalla de inicio del teléfono.
+Si el navegador no muestra la opción de instalación, usa su menú → «Añadir a pantalla de inicio». En **iPhone/iPad**, Apple no permite instalar una app web desde JavaScript: al pulsar **📲 Instalar app** o **📲 Instalar panel** se abre una guía en pantalla con los tres pasos (**Compartir → Añadir a pantalla de inicio → Añadir**). Ábrela siempre con **Safari**. En Android y escritorio, el botón usa la instalación nativa del navegador cuando está disponible. Puedes tener ambas apps en la pantalla de inicio del teléfono; tras instalar, cierra la ventana o haz pull-to-refresh para cargar la última versión.
 
 El límite de acceso solo cuenta intentos fallidos: 10 contraseñas incorrectas por IP en una hora. Un inicio de sesión correcto reinicia el contador, y detrás de Vercel se usa la IP real de `X-Forwarded-For`.
 

@@ -321,7 +321,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123k" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123l" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -332,7 +332,7 @@ def run() -> None:
           and "state.categoria = chip.dataset.cat" in _public_js)
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
-          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261123k" in _sw.text)
+          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261123l" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -391,6 +391,13 @@ def run() -> None:
           borrar_todas.status_code == 200 and borrar_todas.json()["eliminadas"] >= 1
           and db.one("SELECT COUNT(*) FROM visits")[0] == 0
           and resumen_vacio["total_visitas"] == 0)
+    check("69. Guía visible al pulsar Instalar en iPhone",
+          "pv-install-guide" in _install_js
+          and "esAppleMovil()" in _install_js
+          and "Añadir a pantalla de inicio" in _install_js
+          and "beforeinstallprompt" in _install_js
+          and ".pv-guide-backdrop{" in _admin_css
+          and "pvf-static-20261123l" in _sw.text)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config

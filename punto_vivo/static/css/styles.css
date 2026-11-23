@@ -115,6 +115,30 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
 .dialog-body li{margin:7px 0}
 .dialog-foot{padding:0 24px 22px;display:flex;justify-content:flex-end}
 
+/* ------------------------------- guía de instalación en Apple */
+.pv-guide-backdrop{position:fixed;inset:0;z-index:120;background:rgba(5,32,24,.66);backdrop-filter:blur(4px);display:grid;place-items:center;padding:18px}
+.pv-guide-card{background:#fff;border-radius:20px;width:min(100%,460px);max-height:92vh;overflow:auto;box-shadow:0 30px 90px rgba(0,0,0,.35);animation:fadeUp .25s ease;color:var(--texto)}
+.pv-guide-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid var(--linea)}
+.pv-guide-head h3{margin:4px 0 0;font-size:19px}
+.pv-guide-close{border:0;background:#f4f6f5;color:var(--texto);border-radius:50%;width:32px;height:32px;font-size:16px;line-height:1;cursor:pointer;flex:0 0 32px}
+.pv-guide-close:hover{background:var(--linea)}
+.pv-guide-body{padding:18px 20px 4px}
+.pv-guide-lead{margin:0 0 16px;color:var(--muted);font-size:13px;line-height:1.55}
+.pv-guide-steps{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.pv-guide-steps li{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.5}
+.pv-guide-num{flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:var(--verde-claro);color:#1c6842;display:grid;place-items:center;font-weight:800;font-size:13px}
+.pv-guide-share{font-size:17px}
+.pv-guide-note{margin:18px 0 0;padding:11px 12px;border-radius:12px;background:#fff8e1;color:#6b5310;font-size:12px;line-height:1.5}
+.pv-guide-foot{padding:16px 20px 20px;display:flex;justify-content:flex-end}
+.pv-guide-foot .btn{min-width:130px}
+@media (max-width:700px){
+  .pv-guide-backdrop{align-items:end;padding:0}
+  .pv-guide-card{border-radius:18px 18px 0 0;max-width:none;max-height:92dvh;border-bottom:0}
+  .pv-guide-head{position:sticky;top:0;background:#fff;z-index:1}
+  .pv-guide-head h3{font-size:17px}
+  .pv-guide-foot .btn{width:100%}
+}
+
 /* ------------------------------- menú público */
 .public-header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--linea)}
 .public-header-inner{max-width:1180px;margin:auto;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
