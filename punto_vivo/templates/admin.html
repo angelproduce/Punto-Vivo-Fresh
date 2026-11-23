@@ -11,12 +11,12 @@
     </div>
     <p class="sidebar-label">ADMINISTRACIÓN</p>
     <nav class="admin-nav" id="admin-nav">
-      <button class="nav-item is-active" data-section="resumen"><span>📊</span> Resumen</button>
-      <button class="nav-item" data-section="clientes"><span>👥</span> Clientes</button>
-      <button class="nav-item" data-section="visitas"><span>🎟️</span> Visitas</button>
-      <button class="nav-item" data-section="menu"><span>🍔</span> Administrar menú</button>
-      <button class="nav-item" data-section="usuarios"><span>🔐</span> Usuarios</button>
-      <button class="nav-item" data-section="qr"><span>🔳</span> Código QR</button>
+      <button class="nav-item is-active" data-section="resumen" data-short="Resumen"><span class="nav-icon">📊</span><span class="nav-label">Resumen</span></button>
+      <button class="nav-item" data-section="clientes" data-short="Clientes"><span class="nav-icon">👥</span><span class="nav-label">Clientes</span></button>
+      <button class="nav-item" data-section="visitas" data-short="Visitas"><span class="nav-icon">🎟️</span><span class="nav-label">Visitas</span></button>
+      <button class="nav-item" data-section="menu" data-short="Menú"><span class="nav-icon">🍔</span><span class="nav-label">Administrar menú</span></button>
+      <button class="nav-item" data-section="usuarios" data-short="Usuarios"><span class="nav-icon">🔐</span><span class="nav-label">Usuarios</span></button>
+      <button class="nav-item" data-section="qr" data-short="QR"><span class="nav-icon">🔳</span><span class="nav-label">Código QR</span></button>
     </nav>
     <div class="sidebar-bottom">
       <div class="admin-user"><span class="avatar">{{ admin_email[0]|upper }}</span><div><strong>{{ admin_email }}</strong><small>Administrador</small></div></div>
@@ -30,6 +30,8 @@
       <div><span class="eyebrow">PANEL ADMINISTRATIVO</span><h1 id="section-title">Resumen</h1></div>
       <div class="admin-topbar-actions">
         <button class="btn btn-ghost btn-sm" id="admin-mode-toggle" type="button" aria-pressed="false" title="Cambiar entre modo móvil y escritorio">📱 Modo móvil</button>
+        <a class="btn btn-ghost btn-sm solo-movil" href="/menu" target="_blank" rel="noopener">↗ Ver menú</a>
+        <button class="btn btn-ghost btn-sm solo-movil" id="btn-logout-movil" type="button">Cerrar sesión</button>
         <span class="live-badge"><i></i> Sistema activo</span>
       </div>
     </header>

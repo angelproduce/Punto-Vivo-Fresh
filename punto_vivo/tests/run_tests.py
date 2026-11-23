@@ -282,6 +282,22 @@ def run() -> None:
     check("49. Modo móvil ocupa todo el ancho en teléfono",
           "body.pv-mobile .menu-viewport,body.pv-mobile .admin-shell{max-width:none" in _admin_css
           and "@media(max-width:700px)" in _admin_css)
+    check("50. Navegación inferior compacta en el panel",
+          "grid-template-columns:repeat(6,minmax(0,1fr))" in _admin_css
+          and "content:attr(data-short)" in _admin_css
+          and 'data-short="Menú"' in _admin_tpl
+          and 'id="btn-logout-movil"' in _admin_html)
+    check("51. Tablas convertidas en tarjetas en móvil",
+          "body.pv-mobile .data-table thead{display:none}" in _admin_css
+          and "content:attr(data-label)" in _admin_css
+          and "MutationObserver" in _admin_js and "dataset.label" in _admin_js)
+    check("52. Modales tipo hoja y menú denso en móvil",
+          "body.pv-mobile .modal-backdrop{align-items:end;padding:0}" in _admin_css
+          and "body.pv-mobile .product-grid{grid-template-columns:repeat(2" in _admin_css
+          and "dialog.dialog-product" in _admin_css)
+    check("53. El modo móvil conserva menú y cierre de sesión",
+          'class="btn btn-ghost btn-sm solo-movil" href="/menu"' in _admin_html
+          and "$('btn-logout-movil')?.addEventListener" in _admin_js)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config

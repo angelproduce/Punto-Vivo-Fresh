@@ -305,21 +305,51 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
 
 /* ------------------------------- selector de vista móvil / escritorio */
-#mode-toggle,#install-app{white-space:nowrap}
+#mode-toggle,#install-app,#admin-mode-toggle{white-space:nowrap}
+.solo-movil{display:none}
 .menu-viewport{width:100%}
 body.pv-mobile .menu-viewport{max-width:430px;margin:0 auto;background:#fff;border-left:1px solid var(--linea);border-right:1px solid var(--linea)}
 body.pv-desktop .menu-viewport{min-width:1100px;overflow-x:auto}
-body.pv-mobile .public-header-inner{padding:10px 14px}
-body.pv-mobile .header-actions{width:100%;justify-content:space-between}
-body.pv-mobile .visit-chip{font-size:11px}
-body.pv-mobile .menu-main{padding:18px 14px 50px}
-body.pv-mobile .menu-hero{padding:26px;flex-direction:column;align-items:flex-start}
-body.pv-mobile .menu-hero-art{font-size:54px;letter-spacing:-6px}
-body.pv-mobile .menu-toolbar{position:static}
-body.pv-mobile .product-grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px}
-body.pv-mobile .product-image{height:135px}
-body.pv-mobile .product-body{padding:12px}
-body.pv-mobile .product-body h3{font-size:14px}
+body.pv-mobile .public-header-inner{padding:9px 12px;gap:8px}
+body.pv-mobile .public-header .brand-mark{width:34px;height:34px;border-radius:10px}
+body.pv-mobile .public-header .brand-mark img{width:34px;height:34px}
+body.pv-mobile .public-header .brand strong{font-size:13px}
+body.pv-mobile .public-header .brand em{font-size:9px;letter-spacing:.3em}
+body.pv-mobile .header-actions{width:100%;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+body.pv-mobile .header-actions::-webkit-scrollbar{display:none}
+body.pv-mobile .header-actions .btn{flex:none;min-height:38px;padding:8px 10px;font-size:11px}
+body.pv-mobile .visit-chip{font-size:10px;padding:6px 9px;white-space:nowrap}
+body.pv-mobile .menu-main{padding:14px 12px 34px}
+body.pv-mobile .menu-hero{padding:18px;border-radius:16px;gap:8px;flex-direction:column;align-items:flex-start}
+body.pv-mobile .menu-hero .pill{font-size:10px;padding:5px 10px}
+body.pv-mobile .menu-hero h1{font-size:24px;margin:10px 0 6px}
+body.pv-mobile .menu-hero p{font-size:12px}
+body.pv-mobile .menu-hero-art{font-size:40px;letter-spacing:-5px}
+body.pv-mobile .menu-toolbar{position:static;margin:12px 0 0;gap:9px;flex-direction:column;align-items:stretch;padding:0}
+body.pv-mobile .search-wrap{min-width:0;width:100%}
+body.pv-mobile .search-wrap input{min-height:44px}
+body.pv-mobile .chip{min-height:38px;padding:8px 13px;font-size:12px}
+body.pv-mobile .results-line{margin:10px 2px 12px}
+body.pv-mobile .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+body.pv-mobile .product-card{border-radius:14px}
+body.pv-mobile .product-image{height:112px}
+body.pv-mobile .product-image.fallback{font-size:44px}
+body.pv-mobile .product-image .demo-tag{font-size:9px;padding:4px 7px}
+body.pv-mobile .product-body{padding:10px;gap:0}
+body.pv-mobile .product-body h3{font-size:13px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:4px}
+body.pv-mobile .product-cat{font-size:9px}
+body.pv-mobile .product-desc{font-size:11px;-webkit-line-clamp:2;margin:6px 0 10px}
+body.pv-mobile .product-bottom{flex-direction:column;align-items:stretch;gap:6px}
+body.pv-mobile .price{font-size:14px}
+body.pv-mobile .btn-detail{min-height:36px}
+body.pv-mobile .public-footer{padding:18px 12px}
+body.pv-mobile .public-footer .brand-mark{width:34px;height:34px;border-radius:10px;font-size:17px}
+body.pv-mobile .public-footer p{font-size:11px}
+body.pv-mobile dialog.dialog-product{width:100%;max-width:none;max-height:92dvh;margin:auto 0 0;border-radius:18px 18px 0 0;border-bottom:0;overflow:auto}
+body.pv-mobile .product-detail-img{height:180px;font-size:58px}
+body.pv-mobile .product-detail-content{padding:16px}
+body.pv-mobile .product-detail-content h2{font-size:22px}
+body.pv-mobile .toast{left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));max-width:none;text-align:center}
 body.pv-desktop .public-header-inner{padding:12px 22px;max-width:1180px}
 body.pv-desktop .header-actions{width:auto;justify-content:flex-start}
 body.pv-desktop .visit-chip{font-size:12px}
@@ -335,34 +365,73 @@ body.pv-desktop .product-body h3{font-size:17px}
 /* ------------------------------- selector de vista del panel administrativo */
 #admin-mode-toggle{white-space:nowrap}
 .admin-topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-body.pv-mobile .admin-shell{max-width:430px;margin:0 auto;background:#fff;border-left:1px solid var(--linea);border-right:1px solid var(--linea);box-shadow:0 0 45px -22px rgba(11,59,46,.5)}
-body.pv-mobile .admin-sidebar{position:relative;height:auto;padding:14px 12px;gap:10px}
-body.pv-mobile .admin-nav{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;flex:1;gap:5px;scrollbar-width:none;padding-bottom:2px}
-body.pv-mobile .admin-nav::-webkit-scrollbar{display:none}
-body.pv-mobile .admin-nav .nav-item{flex:none;white-space:nowrap;padding:10px 11px;font-size:12px;gap:7px;border-radius:9px}
-body.pv-mobile .admin-nav .nav-item span{font-size:15px}
-body.pv-mobile .sidebar-bottom{margin-top:0;flex-direction:row;flex-wrap:wrap;gap:6px}
-body.pv-mobile .sidebar-bottom .btn-ghost{flex:1;font-size:11px;padding:8px 9px;text-align:center}
-body.pv-mobile .admin-main{padding:16px 14px 50px}
-body.pv-mobile .admin-topbar{flex-direction:column;align-items:flex-start;margin-bottom:18px;gap:10px}
-body.pv-mobile .admin-topbar-actions{width:100%}
-body.pv-mobile .admin-topbar-actions .btn{flex:1;text-align:center}
-body.pv-mobile .admin-topbar h1{font-size:23px}
-body.pv-mobile .live-badge{font-size:10px;padding:6px 10px}
-body.pv-mobile .stat-grid{grid-template-columns:1fr;gap:10px;margin-bottom:16px}
-body.pv-mobile .stat-card{padding:13px}
-body.pv-mobile .stat-card strong{font-size:23px}
-body.pv-mobile .admin-grid-2{grid-template-columns:1fr;gap:12px}
-body.pv-mobile .panel{padding:15px;border-radius:14px}
+body.pv-mobile .admin-shell{max-width:430px;margin:0 auto;display:flex;flex-direction:column;background:var(--fondo);border-left:1px solid var(--linea);border-right:1px solid var(--linea);box-shadow:0 0 45px -22px rgba(11,59,46,.5)}
+body.pv-mobile .admin-main{order:1;flex:1;min-width:0;padding:12px 12px 24px}
+body.pv-mobile .admin-sidebar{order:2;position:sticky;bottom:0;top:auto;z-index:60;height:auto;flex-direction:row;align-items:stretch;gap:0;padding:5px 4px calc(5px + env(safe-area-inset-bottom));background:var(--verde-oscuro);border-top:1px solid rgba(255,255,255,.12)}
+body.pv-mobile .admin-sidebar .brand,body.pv-mobile .admin-sidebar .sidebar-label,body.pv-mobile .admin-sidebar .admin-user,body.pv-mobile .admin-sidebar .sidebar-bottom{display:none}
+body.pv-mobile .admin-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));width:100%;gap:2px;overflow:visible;flex:none;padding:0}
+body.pv-mobile .admin-nav .nav-item{flex:none;flex-direction:column;justify-content:center;gap:3px;padding:6px 1px;min-height:52px;font-size:0;text-align:center;border-radius:10px;white-space:nowrap}
+body.pv-mobile .admin-nav .nav-item .nav-icon{font-size:19px;line-height:1}
+body.pv-mobile .admin-nav .nav-item .nav-label{display:none}
+body.pv-mobile .admin-nav .nav-item::after{content:attr(data-short);font-size:10px;font-weight:750;line-height:1.1}
+body.pv-mobile .admin-nav .nav-item.is-active{background:rgba(245,197,24,.14);color:var(--amarillo);box-shadow:inset 0 3px var(--amarillo)}
+body.pv-mobile .admin-topbar{position:sticky;top:0;z-index:40;flex-direction:column;align-items:stretch;margin:0 -12px 12px;padding:10px 12px 9px;gap:8px;background:rgba(245,250,247,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--linea)}
+body.pv-mobile .admin-topbar h1{font-size:20px}
+body.pv-mobile .admin-topbar .eyebrow{font-size:9px;margin-bottom:2px}
+body.pv-mobile .admin-topbar-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+body.pv-mobile .admin-topbar-actions .btn{min-height:40px;padding:8px;font-size:11px}
+body.pv-mobile .admin-topbar-actions .live-badge{grid-column:1/-1;justify-self:start;font-size:10px;padding:4px 8px}
+body.pv-mobile .solo-movil{display:inline-flex}
+body.pv-mobile .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+body.pv-mobile .stat-card{flex-direction:column;align-items:flex-start;gap:6px;padding:10px;border-radius:12px}
+body.pv-mobile .stat-card:last-child{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between}
+body.pv-mobile .stat-icon{width:30px;height:30px;border-radius:9px;font-size:16px}
+body.pv-mobile .stat-card small{font-size:10px}
+body.pv-mobile .stat-card strong{font-size:20px}
+body.pv-mobile .admin-grid-2{grid-template-columns:1fr;gap:10px}
+body.pv-mobile .panel{padding:12px;border-radius:14px;margin-bottom:10px}
+body.pv-mobile .panel-head{flex-direction:column;align-items:stretch;gap:10px;margin-bottom:12px}
 body.pv-mobile .panel-head h2{font-size:15px}
-body.pv-mobile .chart{height:180px}
-body.pv-mobile .data-table{min-width:460px}
-body.pv-mobile .qr-panel{grid-template-columns:1fr;gap:18px}
-body.pv-mobile .qr-preview{padding:16px}
-body.pv-mobile .qr-preview img{max-width:190px}
+body.pv-mobile .panel-head p{font-size:11px}
+body.pv-mobile .toolbar{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+body.pv-mobile .toolbar .btn{grid-column:1/-1;min-height:42px}
+body.pv-mobile .toolbar input{min-height:42px;width:100%;font-size:13px}
+body.pv-mobile .export-bar{gap:6px}
+body.pv-mobile .export-bar .btn{flex:1;min-height:40px;font-size:11px}
+body.pv-mobile .chart{height:150px;gap:5px;padding:12px 2px 0}
+body.pv-mobile .chart-col small{font-size:9px}
+body.pv-mobile .chart-bar span{font-size:10px}
+body.pv-mobile .table-wrap{overflow:visible;max-height:none}
+body.pv-mobile .data-table{display:block;width:100%;min-width:0;font-size:12px}
+body.pv-mobile .data-table thead{display:none}
+body.pv-mobile .data-table tbody{display:block}
+body.pv-mobile .data-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:10px;margin-bottom:9px}
+body.pv-mobile .data-table td{display:block;min-width:0;padding:0;border:0;background:none !important}
+body.pv-mobile .data-table td::before{content:attr(data-label);display:block;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+body.pv-mobile .data-table td[data-label=""]::before{display:none}
+body.pv-mobile .data-table td.cell-wide{grid-column:1/-1}
+body.pv-mobile .data-table tr:hover td{background:none}
+body.pv-mobile .row-actions{gap:6px}
+body.pv-mobile .mini-btn{min-height:36px;padding:7px 10px;font-size:11px}
+body.pv-mobile .product-thumb{width:36px;height:36px}
+body.pv-mobile .inline-form{padding:11px;gap:8px}
+body.pv-mobile .form-row{gap:10px}
+body.pv-mobile .form-actions .btn{flex:1;min-height:42px}
+body.pv-mobile .qr-panel{grid-template-columns:1fr;gap:14px}
+body.pv-mobile .qr-preview{padding:14px}
+body.pv-mobile .qr-preview img{max-width:170px}
+body.pv-mobile .qr-info h2{font-size:20px}
+body.pv-mobile .copy-row .btn,body.pv-mobile .download-row .btn{min-height:42px;flex:1}
 body.pv-mobile .form-grid{grid-template-columns:1fr}
-body.pv-mobile .modal-backdrop{padding:10px}
-body.pv-mobile .modal-card{max-height:96vh;border-radius:16px}
+body.pv-mobile .visit-row{padding:9px}
+body.pv-mobile .modal-backdrop{align-items:end;padding:0}
+body.pv-mobile .modal-card{width:100%;max-width:none;max-height:92dvh;border-radius:18px 18px 0 0;border-bottom:0}
+body.pv-mobile .modal-wide{width:100%}
+body.pv-mobile .modal-head{padding:14px 16px;position:sticky;top:0;background:#fff;z-index:1;border-radius:18px 18px 0 0}
+body.pv-mobile .modal-head h2{font-size:17px}
+body.pv-mobile .modal-body{padding:14px 16px;max-height:none}
+body.pv-mobile .modal-foot{gap:8px}
+body.pv-mobile .modal-foot .btn{min-height:44px;flex:1}
 body.pv-desktop .admin-shell{min-width:1050px;max-width:none;margin:0;border:0;box-shadow:none}
 body.pv-desktop .admin-sidebar{position:sticky;top:0;height:100vh;flex-direction:column;align-items:stretch;padding:24px 16px;gap:22px}
 body.pv-desktop .sidebar-label{display:block;margin:8px 10px -10px}
@@ -388,9 +457,24 @@ body.pv-desktop .form-grid{grid-template-columns:1fr 1fr}
 /* En un teléfono real el modo móvil ocupa toda la pantalla; en escritorio sigue siendo una vista previa centrada. */
 @media(max-width:700px){
   body.pv-mobile .menu-viewport,body.pv-mobile .admin-shell{max-width:none;width:100%;margin:0;border-left:0;border-right:0;box-shadow:none}
-  body.pv-mobile .admin-sidebar{position:sticky;top:0;z-index:30;padding:10px 10px;gap:8px}
-  body.pv-mobile .admin-nav .nav-item{padding:9px 10px}
-  body.pv-mobile .admin-main{padding:14px 12px 44px}
-  body.pv-mobile .admin-topbar-actions{gap:8px}
-  body.pv-mobile .modal-backdrop{padding:8px}
+  body.pv-mobile .admin-shell{min-height:100dvh}
+  body.pv-mobile .admin-sidebar{position:sticky;bottom:0;top:auto}
+  body.pv-mobile .admin-topbar{margin-left:-12px;margin-right:-12px}
+  /* Registro y acceso también compactos en el teléfono, sin depender del selector de vista. */
+  .welcome-hero{min-height:300px;padding:26px 20px}
+  .hero-copy h1{font-size:34px}
+  .hero-copy p{font-size:14px}
+  .hero-foot{gap:14px;padding-top:18px}
+  .form-card{border-radius:18px}
+  .login-card{padding:24px;border-radius:18px}
+  .login-heading h1{font-size:25px}
+  .dialog{max-width:none;width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;border-bottom:0}
+  .toast{left:12px;right:12px;max-width:none;text-align:center}
+}
+
+/* Al previsualizar el móvil en escritorio, hojas y avisos se limitan al ancho de la vista. */
+@media(min-width:701px){
+  body.pv-mobile .modal-backdrop{left:50%;right:auto;width:430px;transform:translateX(-50%)}
+  body.pv-mobile dialog.dialog-product{left:50%;right:auto;width:430px;transform:translateX(-50%)}
+  body.pv-mobile .toast{left:50%;right:auto;width:406px;transform:translateX(-50%)}
 }

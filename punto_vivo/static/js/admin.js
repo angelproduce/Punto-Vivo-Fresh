@@ -31,6 +31,21 @@
     el._timer = setTimeout(() => { el.hidden = true; }, 3200);
   }
 
+  // En móvil cada fila se convierte en tarjeta: las celdas necesitan su etiqueta.
+  function etiquetarTablas() {
+    document.querySelectorAll('table.data-table').forEach((tabla) => {
+      const cabeceras = Array.from(tabla.querySelectorAll('thead th')).map((th) => th.textContent.trim());
+      tabla.querySelectorAll('tbody tr').forEach((fila) => {
+        Array.from(fila.children).forEach((celda, indice) => {
+          const etiqueta = cabeceras[indice] || '';
+          if (celda.dataset.label !== etiqueta) celda.dataset.label = etiqueta;
+          const ancha = !etiqueta || !!celda.querySelector('.row-actions, button, .mini-btn');
+          celda.classList.toggle('cell-wide', ancha);
+        });
+      });
+    });
+  }
+
   // -------------------------------------------------- vista móvil / escritorio del panel
   const modeBtn = $('admin-mode-toggle');
   if (modeBtn) {
@@ -395,11 +410,19 @@
     catch (e) { $('qr-url').select(); document.execCommand('copy'); toast('Enlace copiado'); }
   });
 
-  $('btn-logout').addEventListener('click', async () => {
+  const salir = async () => {
     try { await api('/api/admin/logout', {method:'POST'}); } catch (e) { /* ignore */ }
     sessionStorage.removeItem('pv_csrf');
     location.href = '/admin/login';
-  });
+  };
+  $('btn-logout').addEventListener('click', salir);
+  $('btn-logout-movil')?.addEventListener('click', salir);
+
+  // Las tablas se redibujan con innerHTML: vuelve a etiquetarlas al cambiar el contenido.
+  const observadorTablas = new MutationObserver(etiquetarTablas);
+  document.querySelectorAll('table.data-table tbody').forEach((tbody) =>
+    observadorTablas.observe(tbody, {childList: true}));
+  etiquetarTablas();
 
   load('resumen');
 })();
