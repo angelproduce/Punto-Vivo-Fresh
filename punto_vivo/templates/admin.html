@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Panel administrativo · PUNTO VIVO FRESH{% endblock %}
+{% block manifest_url %}/admin.webmanifest{% endblock %}
 {% block body %}
 <meta name="pv-csrf" content="{{ csrf }}">
 <meta name="pv-admin-id" content="{{ admin_id }}">
@@ -30,6 +31,7 @@
       <div><span class="eyebrow">PANEL ADMINISTRATIVO</span><h1 id="section-title">Resumen</h1></div>
       <div class="admin-topbar-actions">
         <button class="btn btn-ghost btn-sm" id="admin-mode-toggle" type="button" aria-pressed="false" title="Cambiar entre modo móvil y escritorio">📱 Modo móvil</button>
+        <button class="btn btn-ghost btn-sm" id="admin-install-app" data-install-app type="button" hidden title="Instalar el panel en tu dispositivo">📲 Instalar panel</button>
         <a class="btn btn-ghost btn-sm solo-movil" href="/menu" target="_blank" rel="noopener">↗ Ver menú</a>
         <button class="btn btn-ghost btn-sm solo-movil" id="btn-logout-movil" type="button">Cerrar sesión</button>
         <span class="live-badge"><i></i> Sistema activo</span>

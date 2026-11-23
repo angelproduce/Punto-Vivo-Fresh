@@ -1,10 +1,11 @@
 /* PUNTO VIVO FRESH · service worker para instalación como app */
-const CACHE = 'pvf-static-20261123c';
+const CACHE = 'pvf-static-20261123d';
 const ASSETS = [
   '/static/logo.png',
   '/static/css/styles.css',
   '/static/js/public.js',
   '/static/js/admin.js',
+  '/static/js/install.js',
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png',
 ];

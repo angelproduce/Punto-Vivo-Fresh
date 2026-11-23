@@ -273,9 +273,12 @@ def run() -> None:
     _base_tpl = (_base_ui / "templates" / "base.html").read_text(encoding="utf-8")
     _menu_tpl = (_base_ui / "templates" / "menu.html").read_text(encoding="utf-8")
     _public_js = (_base_ui / "static" / "js" / "public.js").read_text(encoding="utf-8")
-    check("47. Registro PWA y botón de instalación",
+    _install_js = (_base_ui / "static" / "js" / "install.js").read_text(encoding="utf-8")
+    check("47. Registro PWA y botones de instalación",
           'rel="manifest"' in _base_tpl and "serviceWorker.register('/sw.js')" in _base_tpl
-          and 'id="install-app"' in _menu_tpl and "beforeinstallprompt" in _public_js)
+          and 'id="install-app"' in _menu_tpl and 'data-install-app' in _menu_tpl
+          and 'id="admin-install-app"' in _admin_tpl and 'data-install-app' in _admin_tpl
+          and "beforeinstallprompt" in _install_js and 'src="/static/js/install.js"' in _base_tpl)
     check("48. Panel usa modo móvil automático en teléfono",
           "document.body.classList.toggle('pv-mobile', movil)" in _admin_js
           and "if (modo === 'auto') aplicarModo('auto')" in _admin_js)
@@ -298,6 +301,18 @@ def run() -> None:
     check("53. El modo móvil conserva menú y cierre de sesión",
           'class="btn btn-ghost btn-sm solo-movil" href="/menu"' in _admin_html
           and "$('btn-logout-movil')?.addEventListener" in _admin_js)
+    _admin_manifest = anonimo.get("/admin.webmanifest")
+    _admin_manifest_data = _admin_manifest.json() if _admin_manifest.status_code == 200 else {}
+    _admin_sizes = {icon.get("sizes") for icon in _admin_manifest_data.get("icons", [])}
+    check("54. Manifiesto del panel abre directamente el admin",
+          _admin_manifest.status_code == 200 and _admin_manifest_data.get("id") == "/admin"
+          and _admin_manifest_data.get("start_url") == "/admin"
+          and _admin_manifest_data.get("display") == "standalone" and _sizes <= _admin_sizes)
+    check("55. El panel enlaza su propio manifiesto",
+          '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_tpl
+          and '{% block manifest_url %}' in _base_tpl)
+    check("56. Service worker incluye el instalador compartido",
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123d" in _sw.text)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config

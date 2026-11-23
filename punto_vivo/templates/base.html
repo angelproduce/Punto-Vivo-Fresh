@@ -13,8 +13,9 @@
   <title>{% block title %}PUNTO VIVO FRESH{% endblock %}</title>
   <link rel="icon" type="image/png" href="/static/logo.png">
   <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="manifest" href="{% block manifest_url %}/manifest.webmanifest{% endblock %}">
   <link rel="stylesheet" href="/static/css/styles.css">
+  <script src="/static/js/install.js" defer></script>
 </head>
 <body>
 {% block body %}{% endblock %}

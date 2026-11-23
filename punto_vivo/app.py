@@ -198,16 +198,15 @@ def healthz() -> dict[str, str]:
     return {"status": "ok", "app": "PUNTO VIVO FRESH"}
 
 
-@app.get("/manifest.webmanifest", include_in_schema=False)
-def web_manifest() -> JSONResponse:
-    """PWA: permite instalar PUNTO VIVO FRESH en la pantalla de inicio."""
-    manifest = {
-        "id": "/",
-        "name": "PUNTO VIVO FRESH",
-        "short_name": "Punto Vivo",
-        "description": "Menú digital y control de visitas de PUNTO VIVO FRESH.",
+def _web_manifest(app_id: str, nombre: str, corto: str, descripcion: str, inicio: str) -> dict:
+    """Manifiesto PWA compartido por el menú público y el panel administrativo."""
+    return {
+        "id": app_id,
+        "name": nombre,
+        "short_name": corto,
+        "description": descripcion,
         "lang": "es",
-        "start_url": WELCOME_PATH,
+        "start_url": inicio,
         "scope": "/",
         "display": "standalone",
         "orientation": "portrait",
@@ -218,7 +217,26 @@ def web_manifest() -> JSONResponse:
             {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
         ],
     }
-    return JSONResponse(manifest, headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def web_manifest() -> JSONResponse:
+    """PWA del menú: abre el registro y el menú digital."""
+    return JSONResponse(
+        _web_manifest("/", "PUNTO VIVO FRESH", "Punto Vivo",
+                      "Menú digital y control de visitas de PUNTO VIVO FRESH.", WELCOME_PATH),
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@app.get("/admin.webmanifest", include_in_schema=False)
+def admin_web_manifest() -> JSONResponse:
+    """PWA del panel: abre directamente la administración al iniciar."""
+    return JSONResponse(
+        _web_manifest("/admin", "PUNTO VIVO FRESH · Panel", "Panel PVF",
+                      "Panel administrativo de PUNTO VIVO FRESH.", "/admin"),
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
 
 
 @app.get("/sw.js", include_in_schema=False)

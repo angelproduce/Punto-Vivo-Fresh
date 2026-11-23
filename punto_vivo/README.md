@@ -53,7 +53,11 @@ También puedes crear usuarios y cambiar el correo o la contraseña desde el pan
 
 En la cabecera del panel, el botón **📱 Modo móvil / 🖥️ Modo escritorio** cambia la vista del administrador y recuerda tu elección en este navegador. En un teléfono, el panel entra en modo móvil automáticamente y ocupa toda la pantalla con interfaz de app: navegación inferior fija, tarjetas en lugar de tablas, botones táctiles grandes y ventanas emergentes como hojas desde abajo. El menú público usa el mismo estilo compacto.
 
-El sitio es instalable: en el menú pulsa **📲 Instalar app**. Si el navegador no muestra la opción, usa su menú → «Añadir a pantalla de inicio» (en iPhone: **Compartir → Añadir a pantalla de inicio**).
+El sitio es instalable en dos apps independientes:
+- **Menú del negocio:** en el menú público pulsa **📲 Instalar app**. Al abrirla aparece el registro y el menú digital.
+- **Panel administrativo:** entra al panel y pulsa **📲 Instalar panel**. Al abrirla va directo al `/admin`.
+
+Si el navegador no muestra la opción de instalación, usa su menú → «Añadir a pantalla de inicio» (en iPhone: **Compartir → Añadir a pantalla de inicio**). Puedes tener ambas apps en la pantalla de inicio del teléfono.
 
 El límite de acceso solo cuenta intentos fallidos: 10 contraseñas incorrectas por IP en una hora. Un inicio de sesión correcto reinicia el contador, y detrás de Vercel se usa la IP real de `X-Forwarded-For`.
 
