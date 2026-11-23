@@ -51,7 +51,7 @@ Crear otro administrador:
 
 También puedes crear usuarios y cambiar el correo o la contraseña desde el panel, en la sección **Usuarios**. Como ya estás autenticado, no hace falta escribir la contraseña anterior: escribe la nueva y guarda. Al cambiar tu propia contraseña se cierran tus sesiones y hay que entrar de nuevo.
 
-En la cabecera del panel, el botón **📱 Modo móvil / 🖥️ Modo escritorio** cambia la vista del administrador y recuerda tu elección en este navegador. En un teléfono, el panel entra en modo móvil automáticamente y ocupa toda la pantalla con interfaz de app: navegación inferior fija, tarjetas en lugar de tablas, botones táctiles grandes y ventanas emergentes como hojas desde abajo. El menú público usa el mismo estilo compacto.
+En la cabecera del panel, el botón **📱 Modo móvil / 🖥️ Modo escritorio** cambia la vista del administrador y recuerda tu elección en este navegador. En un teléfono, el panel entra en modo móvil automáticamente y ocupa toda la pantalla con interfaz de app: navegación inferior fija, tarjetas en lugar de tablas, botones táctiles grandes y ventanas emergentes como hojas desde abajo. El menú público usa el mismo estilo compacto: el aviso de visita, el cambio de modo, la instalación y el botón de compartir se acomodan en filas, sin tener que deslizar.
 
 El sitio es instalable en dos apps independientes:
 - **Menú del negocio:** en el menú público pulsa **📲 Instalar app**. Al abrirla aparece el registro y el menú digital.

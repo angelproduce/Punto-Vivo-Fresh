@@ -315,8 +315,7 @@ body.pv-mobile .public-header .brand-mark{width:34px;height:34px;border-radius:1
 body.pv-mobile .public-header .brand-mark img{width:34px;height:34px}
 body.pv-mobile .public-header .brand strong{font-size:13px}
 body.pv-mobile .public-header .brand em{font-size:9px;letter-spacing:.3em}
-body.pv-mobile .header-actions{width:100%;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
-body.pv-mobile .header-actions::-webkit-scrollbar{display:none}
+body.pv-mobile .header-actions{width:100%;gap:6px;flex-wrap:wrap;overflow:visible;justify-content:flex-start}
 body.pv-mobile .header-actions .btn{flex:none;min-height:38px;padding:8px 10px;font-size:11px}
 body.pv-mobile .visit-chip{font-size:10px;padding:6px 9px;white-space:nowrap}
 body.pv-mobile .menu-main{padding:14px 12px 34px}

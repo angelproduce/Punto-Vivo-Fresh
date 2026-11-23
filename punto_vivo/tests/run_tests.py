@@ -312,7 +312,7 @@ def run() -> None:
           '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123h" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123i" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -323,10 +323,12 @@ def run() -> None:
           and "state.categoria = chip.dataset.cat" in _public_js)
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
-          and "pvf-static-20261123g" not in _sw.text and "pvf-static-20261123h" in _sw.text)
+          and "pvf-static-20261123h" not in _sw.text and "pvf-static-20261123i" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
-          ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css
-          and "body.pv-mobile .header-actions{width:100%;gap:6px;flex-wrap:nowrap;overflow-x:auto" in _admin_css)
+          ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
+    check("61. Botones del encabezado sin deslizar en móvil",
+          "body.pv-mobile .header-actions{width:100%;gap:6px;flex-wrap:wrap;overflow:visible" in _admin_css
+          and "header-actions::-webkit-scrollbar" not in _admin_css)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
