@@ -171,6 +171,8 @@ def run() -> None:
     check("35. Logo presente en la interfaz", "/static/logo.png" in anonimo.get("/bienvenida").text)
     check("36. Aviso de demostración ausente del menú",
           "Datos de demostración" not in client.get("/menu").text)
+    check("37. Titular del menú actualizado",
+          "Pregunta por el <span>combo</span> de hoy" in client.get("/menu").text)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
