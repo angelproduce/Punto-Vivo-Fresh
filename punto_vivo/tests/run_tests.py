@@ -279,6 +279,9 @@ def run() -> None:
     check("48. Panel usa modo móvil automático en teléfono",
           "document.body.classList.toggle('pv-mobile', movil)" in _admin_js
           and "if (modo === 'auto') aplicarModo('auto')" in _admin_js)
+    check("49. Modo móvil ocupa todo el ancho en teléfono",
+          "body.pv-mobile .menu-viewport,body.pv-mobile .admin-shell{max-width:none" in _admin_css
+          and "@media(max-width:700px)" in _admin_css)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
