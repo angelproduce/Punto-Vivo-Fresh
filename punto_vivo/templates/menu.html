@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Menú digital · PUNTO VIVO FRESH{% endblock %}
 {% block body %}
+<div class="menu-viewport" id="menu-viewport">
 <header class="public-header">
   <div class="public-header-inner">
     <div class="brand">
@@ -9,6 +10,7 @@
     </div>
     <div class="header-actions">
       <span class="visit-chip" id="visit-chip">🎟️ Visita registrada</span>
+      <button class="btn btn-ghost btn-sm" id="mode-toggle" type="button" aria-pressed="false" title="Cambiar entre modo móvil y escritorio">📱 Modo móvil</button>
       <button class="btn btn-ghost btn-sm" id="share-menu" type="button">↗ Compartir menú</button>
     </div>
   </div>
@@ -43,6 +45,7 @@
   <div class="brand brand-light"><span class="brand-mark">🌿</span><span><strong>PUNTO VIVO</strong><em>FRESH</em></span></div>
   <p>Hecho al momento pensando en ti. © PUNTO VIVO FRESH</p>
 </footer>
+</div>
 
 <dialog id="product-dialog" class="dialog dialog-product">
   <button type="button" class="dialog-close" id="close-product" aria-label="Cerrar">✕</button>

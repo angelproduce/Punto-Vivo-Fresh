@@ -177,6 +177,9 @@ def run() -> None:
           "Hecho al momento pensando en ti." in client.get("/menu").text)
     check("39. Texto de fidelidad en bienvenida",
           "Por tu fidelidad te premiamos." in anonimo.get("/bienvenida").text)
+    _menu_html = client.get("/menu").text
+    check("40. Botón de vista móvil/escritorio en el menú", 'id="mode-toggle"' in _menu_html)
+    check("41. Contenedor de vista del menú", 'id="menu-viewport"' in _menu_html)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config

@@ -167,6 +167,36 @@
     } catch (e) { /* cancelado */ }
   });
 
+  // -------------------------------------------------- vista móvil / escritorio
+  const modeBtn = document.getElementById('mode-toggle');
+  if (modeBtn) {
+    const MODE_KEY = 'pv_menu_mode';
+    const esMovil = (modo) => modo === 'mobile' || (modo === 'auto' && window.innerWidth <= 700);
+    const aplicarModo = (modo) => {
+      document.body.classList.toggle('pv-mobile', modo === 'mobile');
+      document.body.classList.toggle('pv-desktop', modo === 'desktop');
+      const movil = esMovil(modo);
+      modeBtn.textContent = movil ? '🖥️ Modo escritorio' : '📱 Modo móvil';
+      modeBtn.title = movil ? 'Cambiar a modo escritorio' : 'Cambiar a modo móvil';
+      modeBtn.setAttribute('aria-pressed', String(modo !== 'auto'));
+    };
+    let modo = 'auto';
+    try { modo = localStorage.getItem(MODE_KEY) || 'auto'; } catch (e) { /* almacenamiento bloqueado */ }
+    if (modo !== 'mobile' && modo !== 'desktop') modo = 'auto';
+    aplicarModo(modo);
+    modeBtn.addEventListener('click', () => {
+      const enMovil = document.body.classList.contains('pv-mobile') ||
+        (!document.body.classList.contains('pv-desktop') && window.innerWidth <= 700);
+      modo = enMovil ? 'desktop' : 'mobile';
+      try { localStorage.setItem(MODE_KEY, modo); } catch (e) { /* almacenamiento bloqueado */ }
+      aplicarModo(modo);
+      toast(modo === 'mobile' ? 'Modo móvil activado' : 'Modo escritorio activado');
+    });
+    window.addEventListener('resize', () => {
+      if (!document.body.classList.contains('pv-mobile') && !document.body.classList.contains('pv-desktop')) aplicarModo('auto');
+    });
+  }
+
   fetch('/api/visita/actual').then((r) => r.ok ? r.json() : null).then((data) => {
     if (data) document.getElementById('visit-chip').textContent = `🎟️ Visita #${data.visit_number} registrada`;
   }).catch(() => {});
