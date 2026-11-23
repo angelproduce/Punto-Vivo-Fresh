@@ -66,7 +66,7 @@
     <!-- ---------------------------------------------------- CLIENTES -->
     <section class="admin-section" id="section-clientes">
       <div class="panel">
-        <div class="panel-head"><div><h2>Gestión de clientes</h2><p>Historial individual de cada cliente</p></div>
+        <div class="panel-head"><div><h2>Gestión de clientes</h2><p>Historial individual de cada cliente · puedes borrar su historial</p></div>
           <div class="toolbar"><input type="search" id="cliente-q" placeholder="Buscar nombre o teléfono"><button class="btn btn-primary btn-sm" id="btn-buscar-clientes">Buscar</button></div>
         </div>
         <div class="table-wrap"><table class="data-table"><thead><tr><th>Nombre</th><th>Teléfono</th><th>Visitas</th><th>Primera visita</th><th>Última visita</th><th></th></tr></thead><tbody id="clientes-body"></tbody></table></div>
@@ -87,8 +87,9 @@
         <div class="export-bar">
           <a class="btn btn-outline btn-sm" id="export-visitas" href="#">⬇ Exportar visitas (CSV)</a>
           <a class="btn btn-outline btn-sm" id="export-clientes" href="#">⬇ Exportar clientes (CSV)</a>
+          <button class="btn btn-outline btn-sm btn-danger" id="delete-visitas" type="button" title="Eliminar las visitas del filtro actual o todas">🗑 Eliminar visitas</button>
         </div>
-        <div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Fecha y hora</th><th>Cliente</th><th>Teléfono</th><th>N.º visita</th><th>Registro exacto</th></tr></thead><tbody id="visitas-body"></tbody></table></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Fecha y hora</th><th>Cliente</th><th>Teléfono</th><th>N.º visita</th><th>Registro exacto</th><th></th></tr></thead><tbody id="visitas-body"></tbody></table></div>
       </div>
     </section>
 

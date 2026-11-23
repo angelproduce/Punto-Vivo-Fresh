@@ -321,7 +321,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123j" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123k" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -332,7 +332,7 @@ def run() -> None:
           and "state.categoria = chip.dataset.cat" in _public_js)
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
-          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261123j" in _sw.text)
+          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261123k" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -350,6 +350,47 @@ def run() -> None:
           'href="/admin.webmanifest"' in _html_login
           and 'id="admin-login-install-app"' in _html_login
           and 'src="/static/js/install.js"' in _html_login)
+    check("64. Botones para eliminar visitas y borrar historial",
+          'id="delete-visitas"' in _admin_html
+          and 'data-delete-visit=' in _admin_js and 'data-clear-history=' in _admin_js
+          and 'data-borrar-historial=' in _admin_js and '.btn-danger{' in _admin_css)
+
+    # Eliminaciones: se ejecutan al final para no afectar al resto de comprobaciones
+    registrar("María Borrar", "8091112222", "token-borrar-historial-123")
+    cid_maria = db.one("SELECT id FROM customers WHERE phone='8091112222'")[0]
+    borrar_hist = anonimo.delete(f"/api/admin/clientes/{cid_maria}/visitas", headers=admin_headers())
+    check("65. Borrar el historial de un cliente conserva el cliente",
+          borrar_hist.status_code == 200 and borrar_hist.json()["eliminadas"] >= 1
+          and db.one("SELECT COUNT(*) FROM visits WHERE customer_id=?", (cid_maria,))[0] == 0
+          and db.one("SELECT COUNT(*) FROM customers WHERE id=?", (cid_maria,))[0] == 1)
+
+    reset_ventana()
+    registrar("Visita Suelta", "8095552222", "token-borrar-una-123456789")
+    vid_suelta = db.one("SELECT id FROM visits WHERE phone='8095552222'")[0]
+    borrar_una = anonimo.delete(f"/api/admin/visitas/{vid_suelta}", headers=admin_headers())
+    no_existe = anonimo.delete(f"/api/admin/visitas/{vid_suelta}", headers=admin_headers())
+    check("66. Eliminar una visita concreta",
+          borrar_una.status_code == 200 and borrar_una.json()["eliminadas"] == 1
+          and no_existe.status_code == 404
+          and db.one("SELECT COUNT(*) FROM visits WHERE id=?", (vid_suelta,))[0] == 0)
+
+    reset_ventana()
+    registrar("Borrar Filtrado", "8097778888", "token-borrar-filtro-12345678")
+    total_antes_filtro = db.one("SELECT COUNT(*) FROM visits")[0]
+    borrar_filtro = anonimo.delete("/api/admin/visitas?q=Borrar%20Filtrado", headers=admin_headers())
+    check("67. Eliminar solo las visitas del filtro",
+          borrar_filtro.status_code == 200 and borrar_filtro.json()["eliminadas"] == 1
+          and db.one("SELECT COUNT(*) FROM visits")[0] == total_antes_filtro - 1
+          and db.one("SELECT COUNT(*) FROM visits WHERE full_name LIKE '%Juan%'")[0] >= 1,
+          f"status={borrar_filtro.status_code} body={borrar_filtro.text} antes={total_antes_filtro} "
+          f"ahora={db.one('SELECT COUNT(*) FROM visits')[0]}")
+
+    borrar_todas = anonimo.delete("/api/admin/visitas", headers=admin_headers())
+    resumen_vacio = anonimo.get("/api/admin/resumen", headers=admin_headers()).json()
+    check("68. Eliminar todas las visitas actualiza el resumen",
+          borrar_todas.status_code == 200 and borrar_todas.json()["eliminadas"] >= 1
+          and db.one("SELECT COUNT(*) FROM visits")[0] == 0
+          and resumen_vacio["total_visitas"] == 0)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config

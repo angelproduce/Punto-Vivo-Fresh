@@ -775,9 +775,14 @@ def _local_visit_where(filters: dict[str, str]) -> tuple[str, tuple[Any, ...]]:
     params: list[Any] = []
     q = filters.get("q", "").strip()
     if q:
-        sql += " AND (full_name LIKE ? OR phone LIKE ?)"
+        like = _like(q)
         digits = re.sub(r"\D", "", q)
-        params.extend([_like(q), _like(digits)])
+        if digits:
+            sql += " AND (full_name LIKE ? OR phone LIKE ? OR phone LIKE ?)"
+            params.extend([like, like, _like(digits)])
+        else:
+            sql += " AND (full_name LIKE ? OR phone LIKE ?)"
+            params.extend([like, like])
     if filters.get("desde"):
         sql += " AND visit_date >= ?"
         params.append(filters["desde"])
@@ -899,3 +904,65 @@ def customer_visits(customer_id: int) -> list[dict[str, Any]]:
     return _local_all(
         "SELECT * FROM visits WHERE customer_id = ? ORDER BY visit_number DESC", (customer_id,)
     )
+
+
+def delete_visits(filters: dict[str, str] | None = None) -> int:
+    """Elimina todas las visitas o solo las que coinciden con el filtro."""
+    filters = filters or {}
+    if supabase_enabled():
+        ids: list[str] = []
+        offset = 0
+        while True:
+            page = _rows("visits", {
+                "select": "id,visit_date", "order": "id.asc",
+                "limit": 1000, "offset": offset, **_visit_params(filters),
+            })
+            ids.extend(str(r["id"]) for r in page if _matches_filters(r, filters))
+            if len(page) < 1000:
+                break
+            offset += 1000
+        for visit_id in ids:
+            _delete("visits", visit_id)
+        return len(ids)
+    where, params = _local_visit_where(filters)
+    conn = db.connect()
+    try:
+        cursor = conn.execute("DELETE FROM visits " + where, params)
+        conn.commit()
+        return cursor.rowcount
+    finally:
+        conn.close()
+
+
+def delete_customer_visits(customer_id: int) -> int:
+    """Borra todo el historial de visitas de un cliente, sin borrar el cliente."""
+    if supabase_enabled():
+        ids = [str(r["id"]) for r in _rows(
+            "visits", {"select": "id", "customer_id": f"eq.{customer_id}"}
+        )]
+        for visit_id in ids:
+            _delete("visits", visit_id)
+        return len(ids)
+    conn = db.connect()
+    try:
+        cursor = conn.execute("DELETE FROM visits WHERE customer_id = ?", (customer_id,))
+        conn.commit()
+        return cursor.rowcount
+    finally:
+        conn.close()
+
+
+def delete_visit(visit_id: int) -> int:
+    """Elimina una visita concreta."""
+    if supabase_enabled():
+        if _row("visits", {"id": f"eq.{visit_id}"}) is None:
+            return 0
+        _delete("visits", visit_id)
+        return 1
+    conn = db.connect()
+    try:
+        cursor = conn.execute("DELETE FROM visits WHERE id = ?", (visit_id,))
+        conn.commit()
+        return cursor.rowcount
+    finally:
+        conn.close()

@@ -47,6 +47,9 @@ code{background:var(--verde-claro);padding:1px 5px;border-radius:5px;font-size:1
 .btn-primary:hover{box-shadow:0 16px 32px -12px rgba(11,59,46,1)}
 .btn-outline{background:#fff;color:var(--verde-oscuro);border:1.5px solid var(--linea)}
 .btn-outline:hover{border-color:var(--verde)}
+.btn-danger{color:var(--rojo);border-color:#e6b3b3}
+.btn-danger:hover{border-color:var(--rojo);background:#fff6f6}
+.history-clear{margin-top:16px}
 .btn-ghost{background:rgba(255,255,255,.08);color:inherit}
 .btn-block{width:100%}
 .btn-sm{padding:8px 13px;font-size:13px;border-radius:10px}

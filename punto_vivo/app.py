@@ -542,7 +542,7 @@ def api_historial(cliente_id: int, session=Depends(require_admin)) -> dict[str, 
         raise HTTPException(status_code=404, detail="Cliente no encontrado.")
     rows = repository.customer_visits(cliente_id)
     return {
-        "cliente": {"nombre": cliente["full_name"], "telefono": cliente["phone"]},
+        "cliente": {"id": cliente_id, "nombre": cliente["full_name"], "telefono": cliente["phone"]},
         "visitas": [
             {
                 "numero": r["visit_number"],
@@ -581,6 +581,28 @@ def api_visitas(q: str = "", desde: str = "", hasta: str = "", limite: int = 100
             for r in rows
         ],
     }
+
+
+@app.delete("/api/admin/visitas")
+def api_eliminar_visitas(q: str = "", desde: str = "", hasta: str = "",
+                         session=Depends(require_admin)) -> dict[str, int]:
+    """Elimina las visitas del filtro actual o todas si no hay filtro."""
+    return {"eliminadas": repository.delete_visits(filtro_visitas(q, desde, hasta))}
+
+
+@app.delete("/api/admin/visitas/{visita_id}")
+def api_eliminar_visita(visita_id: int, session=Depends(require_admin)) -> dict[str, int]:
+    eliminadas = repository.delete_visit(visita_id)
+    if not eliminadas:
+        raise HTTPException(status_code=404, detail="Visita no encontrada.")
+    return {"eliminadas": eliminadas}
+
+
+@app.delete("/api/admin/clientes/{cliente_id}/visitas")
+def api_eliminar_historial(cliente_id: int, session=Depends(require_admin)) -> dict[str, int]:
+    if repository.get_customer(cliente_id) is None:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado.")
+    return {"eliminadas": repository.delete_customer_visits(cliente_id)}
 
 
 @app.get("/api/admin/exportar/visitas.csv")

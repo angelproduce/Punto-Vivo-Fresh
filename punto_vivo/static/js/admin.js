@@ -124,10 +124,19 @@
       $('clientes-body').innerHTML = d.clientes.length ? d.clientes.map((c) => `
         <tr><td><strong>${esc(c.nombre)}</strong></td><td>${esc(c.telefono)}</td>
         <td><span class="tag">${c.total}</span></td><td>${esc(c.primera)}</td><td>${esc(c.ultima)}</td>
-        <td><button class="mini-btn" data-history="${c.id}">Historial</button></td></tr>`).join('')
+        <td><div class="row-actions"><button class="mini-btn" data-history="${c.id}">Historial</button><button class="mini-btn danger" data-clear-history="${c.id}" title="Borrar todas las visitas de este cliente">🗑 Borrar historial</button></div></td></tr>`).join('')
         : '<tr><td colspan="6" class="muted">No hay clientes para ese filtro.</td></tr>';
       $('clientes-body').querySelectorAll('[data-history]').forEach((b) =>
         b.addEventListener('click', () => showHistorial(Number(b.dataset.history))));
+      $('clientes-body').querySelectorAll('[data-clear-history]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const fila = b.closest('tr');
+          borrarHistorial(
+            Number(b.dataset.clearHistory),
+            fila?.querySelector('strong')?.textContent || 'este cliente',
+            Number(fila?.querySelector('.tag')?.textContent || 0)
+          );
+        }));
     } catch (e) { toast(e.message, true); }
   }
 
@@ -137,10 +146,28 @@
       $('history-title').textContent = `Historial · ${d.cliente.nombre}`;
       $('history-body').innerHTML = `<p class="small-note">Teléfono: ${esc(d.cliente.telefono)} · Total: ${d.visitas.length} visita(s)</p>` +
         (d.visitas.length ? d.visitas.map((v) => `<div class="visit-row"><span class="num">Visita #${v.numero}</span><div><strong>${esc(v.fecha)}</strong> · ${esc(v.hora)}<small>Registrado: ${esc(v.registro)}</small></div></div>`).join('')
-          : '<p class="muted">Sin visitas.</p>');
+          : '<p class="muted">Sin visitas.</p>') +
+        `<button class="btn btn-outline btn-sm btn-danger history-clear" data-borrar-historial="${d.cliente.id}" type="button">🗑 Borrar historial de ${esc(d.cliente.nombre)}</button>`;
       $('history-backdrop').classList.remove('hidden');
     } catch (e) { toast(e.message, true); }
   }
+
+  async function borrarHistorial(id, nombre = 'este cliente', total = null) {
+    const detalle = total === null ? '' : ` Se borrarán ${total} visita(s).`;
+    if (!confirm(`¿Borrar el historial de ${nombre}?${detalle} No se puede deshacer.`)) return;
+    try {
+      const d = await api(`/api/admin/clientes/${id}/visitas`, {method: 'DELETE'});
+      toast(`Historial borrado: ${d.eliminadas} visita(s)`);
+      loadClientes();
+      loadResumen();
+      if (!$('history-backdrop').classList.contains('hidden')) $('history-backdrop').classList.add('hidden');
+    } catch (e) { toast(e.message, true); }
+  }
+
+  $('history-body').addEventListener('click', (e) => {
+    const boton = e.target.closest('[data-borrar-historial]');
+    if (boton) borrarHistorial(Number(boton.dataset.borrarHistorial), $('history-title').textContent.replace('Historial · ', ''));
+  });
 
   function visitaQuery() {
     return new URLSearchParams({q: $('visita-q').value, desde: $('visita-desde').value, hasta: $('visita-hasta').value});
@@ -154,8 +181,9 @@
       $('visitas-body').innerHTML = d.visitas.length ? d.visitas.map((v) => `
         <tr><td>${v.id}</td><td><strong>${esc(v.fecha)}</strong><br><small>${esc(v.hora)}</small></td>
         <td>${esc(v.nombre)}</td><td>${esc(v.telefono)}</td><td><span class="tag">#${v.numero}</span></td>
-        <td><small>${esc(v.registro)}</small></td></tr>`).join('')
-        : '<tr><td colspan="6" class="muted">No hay visitas para ese filtro.</td></tr>';
+        <td><small>${esc(v.registro)}</small></td>
+        <td><div class="row-actions"><button class="mini-btn danger" data-delete-visit="${v.id}" title="Eliminar esta visita">🗑 Eliminar</button></div></td></tr>`).join('')
+        : '<tr><td colspan="7" class="muted">No hay visitas para ese filtro.</td></tr>';
       $('export-visitas').href = '/api/admin/exportar/visitas.csv?' + params;
     } catch (e) { toast(e.message, true); }
   }
@@ -166,6 +194,37 @@
   ['visita-q', 'visita-desde', 'visita-hasta'].forEach((id) =>
     $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') loadVisitas(); }));
   $('export-clientes').href = '/api/admin/exportar/clientes.csv';
+
+  // -------------------------------------------------- eliminar visitas
+  $('delete-visitas').addEventListener('click', async () => {
+    const params = visitaQuery();
+    try {
+      const actuales = await api('/api/admin/visitas?' + params);
+      const conFiltro = [...params].some(([, valor]) => valor);
+      const aviso = conFiltro
+        ? `¿Eliminar las ${actuales.total} visita(s) del filtro actual?`
+        : `¿Eliminar TODAS las ${actuales.total} visita(s) registradas?`;
+      if (!confirm(`${aviso} No se puede deshacer.`)) return;
+      const d = await api('/api/admin/visitas?' + params, {method: 'DELETE'});
+      toast(`Visitas eliminadas: ${d.eliminadas}`);
+      loadVisitas();
+      loadResumen();
+    } catch (e) { toast(e.message, true); }
+  });
+
+  $('visitas-body').addEventListener('click', async (e) => {
+    const boton = e.target.closest('[data-delete-visit]');
+    if (!boton) return;
+    const fila = boton.closest('tr');
+    const quien = fila?.children[2]?.textContent.trim() || 'este cliente';
+    if (!confirm(`¿Eliminar la visita de ${quien}? No se puede deshacer.`)) return;
+    try {
+      const d = await api(`/api/admin/visitas/${boton.dataset.deleteVisit}`, {method: 'DELETE'});
+      toast(`Visita eliminada (${d.eliminadas})`);
+      loadVisitas();
+      loadResumen();
+    } catch (err) { toast(err.message, true); }
+  });
 
   // -------------------------------------------------- categorías
   let categoriasCache = [];

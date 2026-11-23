@@ -105,7 +105,7 @@ Reglas importantes:
 ## 4. Menú y administración
 
 - **Público:** búsqueda y filtros por categoría siempre visibles (todas las categorías se muestran en filas, sin deslizar), ficha de producto, botón compartir, aviso de datos de demostración.
-- **Panel:** resumen con KPIs y gráfico de 7 días, top de clientes, gestión de clientes con historial, gestión de visitas con búsqueda y filtros de fecha, exportación CSV (clientes y visitas), CRUD de productos y categorías, activación/desactivación, orden, subida de fotos (redimensionadas a WebP).
+- **Panel:** resumen con KPIs y gráfico de 7 días, top de clientes, gestión de clientes con historial y botón **🗑 Borrar historial** (por cliente y desde su historial), gestión de visitas con búsqueda y filtros de fecha, botón **🗑 Eliminar visitas** (borra las del filtro actual o todas) y eliminación individual, exportación CSV (clientes y visitas), CRUD de productos y categorías, activación/desactivación, orden, subida de fotos (redimensionadas a WebP). Las eliminaciones piden confirmación y no se pueden deshacer.
 - **QR:** descarga PNG y SVG del mismo enlace permanente al formulario de registro.
 
 Los productos iniciales son **12 ejemplos marcados como DEMO** con precio `0 = "Precio por definir"`. No son datos comerciales reales: reemplázalos desde *Administrar menú*. Las fotos de demostración se cargan desde Unsplash; si no hay internet, la interfaz muestra un ilustrador de respaldo por categoría. Puedes subir tus propias fotos desde el panel (se guardan optimizadas en `static/uploads/`).
