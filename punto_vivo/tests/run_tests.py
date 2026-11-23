@@ -173,6 +173,8 @@ def run() -> None:
           "Datos de demostración" not in client.get("/menu").text)
     check("37. Titular del menú actualizado",
           "Pregunta por el <span>combo</span> de hoy" in client.get("/menu").text)
+    check("38. Pie del menú actualizado",
+          "Hecho al momento pensando en ti." in client.get("/menu").text)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
