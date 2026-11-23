@@ -115,7 +115,7 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
 /* ------------------------------- menú público */
 .public-header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--linea)}
 .public-header-inner{max-width:1180px;margin:auto;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.header-actions{display:flex;align-items:center;gap:10px}
+.header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .visit-chip{background:var(--verde-claro);color:#1c6842;border-radius:100px;padding:7px 13px;font-size:12px;font-weight:700}
 .menu-main{max-width:1180px;margin:auto;padding:28px 22px 70px}
 .menu-hero{border-radius:26px;background:linear-gradient(120deg,var(--verde-oscuro),#126347);padding:42px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:20px;position:relative;overflow:hidden;animation:fadeUp .6s ease both}
