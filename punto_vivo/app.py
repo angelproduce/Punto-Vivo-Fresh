@@ -605,6 +605,15 @@ def api_eliminar_historial(cliente_id: int, session=Depends(require_admin)) -> d
     return {"eliminadas": repository.delete_customer_visits(cliente_id)}
 
 
+@app.delete("/api/admin/clientes/{cliente_id}")
+def api_eliminar_cliente(cliente_id: int, session=Depends(require_admin)) -> dict[str, int]:
+    """Elimina el cliente y todas sus visitas en una sola operación."""
+    visitas = repository.delete_customer(cliente_id)
+    if visitas is None:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado.")
+    return {"eliminado": 1, "visitas": visitas}
+
+
 @app.get("/api/admin/exportar/visitas.csv")
 def exportar_visitas(q: str = "", desde: str = "", hasta: str = "",
                      session=Depends(require_admin)) -> Response:

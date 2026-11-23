@@ -966,3 +966,34 @@ def delete_visit(visit_id: int) -> int:
         return cursor.rowcount
     finally:
         conn.close()
+
+
+def delete_customer(customer_id: int) -> int | None:
+    """Borra un cliente y todo su historial. Devuelve las visitas borradas o None si no existe."""
+    if supabase_enabled():
+        if _row("customers", {"id": f"eq.{customer_id}"}) is None:
+            return None
+        visitas = _rows("visits", {"select": "id", "customer_id": f"eq.{customer_id}"})
+        for visita in visitas:
+            _delete("visits", visita["id"])
+        _delete("customers", customer_id)
+        return len(visitas)
+
+    conn = db.connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        if conn.execute("SELECT id FROM customers WHERE id = ?", (customer_id,)).fetchone() is None:
+            conn.rollback()
+            return None
+        total = conn.execute(
+            "SELECT COUNT(*) FROM visits WHERE customer_id = ?", (customer_id,)
+        ).fetchone()[0]
+        conn.execute("DELETE FROM visits WHERE customer_id = ?", (customer_id,))
+        conn.execute("DELETE FROM customers WHERE id = ?", (customer_id,))
+        conn.commit()
+        return int(total)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()

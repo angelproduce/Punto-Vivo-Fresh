@@ -321,7 +321,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123l" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123m" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -332,7 +332,7 @@ def run() -> None:
           and "state.categoria = chip.dataset.cat" in _public_js)
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
-          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261123l" in _sw.text)
+          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261123m" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -397,7 +397,27 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261123l" in _sw.text)
+          and "pvf-static-20261123m" in _sw.text)
+    check("70. Botones para eliminar clientes",
+          "data-delete-customer=" in _admin_js
+          and "data-borrar-cliente=" in _admin_js
+          and "history-actions" in _admin_css)
+
+    reset_ventana()
+    registrar("Cliente A Borrar", "8099998888", "token-eliminar-cliente-1234")
+    cid_borrar = db.one("SELECT id FROM customers WHERE phone='8099998888'")[0]
+    otros_clientes = db.one("SELECT COUNT(*) FROM customers")[0]
+    borrar_cliente = anonimo.delete(f"/api/admin/clientes/{cid_borrar}", headers=admin_headers())
+    no_existe_cliente = anonimo.delete(f"/api/admin/clientes/{cid_borrar}", headers=admin_headers())
+    check("71. Eliminar cliente borra su historial y conserva los demás",
+          borrar_cliente.status_code == 200
+          and borrar_cliente.json()["eliminado"] == 1
+          and borrar_cliente.json()["visitas"] >= 1
+          and no_existe_cliente.status_code == 404
+          and db.one("SELECT COUNT(*) FROM customers WHERE id=?", (cid_borrar,))[0] == 0
+          and db.one("SELECT COUNT(*) FROM visits WHERE customer_id=?", (cid_borrar,))[0] == 0
+          and db.one("SELECT COUNT(*) FROM customers")[0] == otros_clientes - 1,
+          f"status={borrar_cliente.status_code} body={borrar_cliente.text}")
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
