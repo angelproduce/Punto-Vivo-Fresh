@@ -262,7 +262,8 @@ def run() -> None:
     _sizes = {icon.get("sizes") for icon in _manifest_data.get("icons", [])}
     check("44. Manifiesto PWA para instalar",
           _manifest.status_code == 200 and _manifest_data.get("display") == "standalone"
-          and _manifest_data.get("start_url") == "/bienvenida" and {"192x192", "512x512"} <= _sizes)
+          and _manifest_data.get("start_url") == "/bienvenida" and {"192x192", "512x512"} <= _sizes
+          and "application/manifest+json" in _manifest.headers.get("content-type", ""))
     _sw = anonimo.get("/sw.js")
     check("45. Service worker con alcance raíz",
           _sw.status_code == 200 and _sw.headers.get("service-worker-allowed") == "/"
@@ -272,12 +273,14 @@ def run() -> None:
           all((_icons_dir / ("icon-%d.png" % size)).stat().st_size > 0 for size in (192, 512)))
     _base_tpl = (_base_ui / "templates" / "base.html").read_text(encoding="utf-8")
     _menu_tpl = (_base_ui / "templates" / "menu.html").read_text(encoding="utf-8")
+    _admin_login_tpl = (_base_ui / "templates" / "admin_login.html").read_text(encoding="utf-8")
     _public_js = (_base_ui / "static" / "js" / "public.js").read_text(encoding="utf-8")
     _install_js = (_base_ui / "static" / "js" / "install.js").read_text(encoding="utf-8")
     check("47. Registro PWA y botones de instalación",
           'rel="manifest"' in _base_tpl and "serviceWorker.register('/sw.js')" in _base_tpl
           and 'id="install-app"' in _menu_tpl and 'data-install-app' in _menu_tpl
           and 'id="admin-install-app"' in _admin_tpl and 'data-install-app' in _admin_tpl
+          and 'id="admin-login-install-app"' in _admin_login_tpl and 'data-install-app' in _admin_login_tpl
           and "beforeinstallprompt" in _install_js and 'src="/static/js/install.js"' in _base_tpl)
     check("48. Panel usa modo móvil automático en teléfono",
           "document.body.classList.toggle('pv-mobile', movil)" in _admin_js
@@ -304,15 +307,21 @@ def run() -> None:
     _admin_manifest = anonimo.get("/admin.webmanifest")
     _admin_manifest_data = _admin_manifest.json() if _admin_manifest.status_code == 200 else {}
     _admin_sizes = {icon.get("sizes") for icon in _admin_manifest_data.get("icons", [])}
-    check("54. Manifiesto del panel abre directamente el admin",
+    _anonimo_pwa = TestClient(app)
+    _admin_login = _anonimo_pwa.get("/admin/login", follow_redirects=False)
+    check("54. Manifiesto del panel es instalable sin sesión",
           _admin_manifest.status_code == 200 and _admin_manifest_data.get("id") == "/admin"
-          and _admin_manifest_data.get("start_url") == "/admin"
-          and _admin_manifest_data.get("display") == "standalone" and _sizes <= _admin_sizes)
-    check("55. El panel enlaza su propio manifiesto",
+          and _admin_manifest_data.get("start_url") == "/admin/login"
+          and _admin_manifest_data.get("scope") == "/admin"
+          and _admin_manifest_data.get("display") == "standalone" and _sizes <= _admin_sizes
+          and "application/manifest+json" in _admin_manifest.headers.get("content-type", "")
+          and _admin_login.status_code == 200)
+    check("55. El panel y su acceso enlazan su propio manifiesto",
           '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_tpl
+          and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123i" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123j" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -323,12 +332,24 @@ def run() -> None:
           and "state.categoria = chip.dataset.cat" in _public_js)
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
-          and "pvf-static-20261123h" not in _sw.text and "pvf-static-20261123i" in _sw.text)
+          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261123j" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
           "body.pv-mobile .header-actions{width:100%;gap:6px;flex-wrap:wrap;overflow:visible" in _admin_css
           and "header-actions::-webkit-scrollbar" not in _admin_css)
+    _cliente_sesion = TestClient(app)
+    _entrada = _cliente_sesion.post("/api/admin/login",
+                                    json={"email": ADMIN_EMAIL, "password": ADMIN_PASS})
+    _login_con_sesion = _cliente_sesion.get("/admin/login", follow_redirects=False)
+    check("62. El login del panel redirige al admin con sesión",
+          _entrada.status_code == 200 and _login_con_sesion.status_code in (302, 307)
+          and _login_con_sesion.headers.get("location", "").startswith("/admin"))
+    _html_login = _anonimo_pwa.get("/admin/login").text
+    check("63. La pantalla de acceso ofrece instalar el panel",
+          'href="/admin.webmanifest"' in _html_login
+          and 'id="admin-login-install-app"' in _html_login
+          and 'src="/static/js/install.js"' in _html_login)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config

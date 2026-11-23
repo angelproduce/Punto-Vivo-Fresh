@@ -179,6 +179,7 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
 .login-heading p{color:var(--muted);margin:0;font-size:14px}
 .login-card form label{display:block;font-weight:700;font-size:13px;margin-bottom:7px}
 .back-link{display:block;text-align:center;margin-top:18px;font-size:12px;color:var(--muted)}
+.login-install{margin-top:12px}
 
 /* ------------------------------- panel administrativo */
 .admin-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}

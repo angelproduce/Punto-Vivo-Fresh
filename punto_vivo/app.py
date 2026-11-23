@@ -198,7 +198,8 @@ def healthz() -> dict[str, str]:
     return {"status": "ok", "app": "PUNTO VIVO FRESH"}
 
 
-def _web_manifest(app_id: str, nombre: str, corto: str, descripcion: str, inicio: str) -> dict:
+def _web_manifest(app_id: str, nombre: str, corto: str, descripcion: str, inicio: str,
+                  scope: str = "/") -> dict:
     """Manifiesto PWA compartido por el menú público y el panel administrativo."""
     return {
         "id": app_id,
@@ -207,7 +208,7 @@ def _web_manifest(app_id: str, nombre: str, corto: str, descripcion: str, inicio
         "description": descripcion,
         "lang": "es",
         "start_url": inicio,
-        "scope": "/",
+        "scope": scope,
         "display": "standalone",
         "orientation": "portrait",
         "background_color": "#f4f8f6",
@@ -225,16 +226,18 @@ def web_manifest() -> JSONResponse:
     return JSONResponse(
         _web_manifest("/", "PUNTO VIVO FRESH", "Punto Vivo",
                       "Menú digital y control de visitas de PUNTO VIVO FRESH.", WELCOME_PATH),
+        media_type="application/manifest+json",
         headers={"Cache-Control": "public, max-age=3600"},
     )
 
 
 @app.get("/admin.webmanifest", include_in_schema=False)
 def admin_web_manifest() -> JSONResponse:
-    """PWA del panel: abre directamente la administración al iniciar."""
+    """PWA del panel: el login redirige al panel cuando ya hay sesión iniciada."""
     return JSONResponse(
         _web_manifest("/admin", "PUNTO VIVO FRESH · Panel", "Panel PVF",
-                      "Panel administrativo de PUNTO VIVO FRESH.", "/admin"),
+                      "Panel administrativo de PUNTO VIVO FRESH.", "/admin/login", scope="/admin"),
+        media_type="application/manifest+json",
         headers={"Cache-Control": "public, max-age=3600"},
     )
 

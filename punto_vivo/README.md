@@ -55,7 +55,7 @@ En la cabecera del panel, el botón **📱 Modo móvil / 🖥️ Modo escritorio
 
 El sitio es instalable en dos apps independientes:
 - **Menú del negocio:** en el menú público pulsa **📲 Instalar app**. Al abrirla aparece el registro y el menú digital.
-- **Panel administrativo:** entra al panel y pulsa **📲 Instalar panel**. Al abrirla va directo al `/admin`.
+- **Panel administrativo:** en la pantalla de acceso o dentro del panel pulsa **📲 Instalar panel**. Al abrirla aparece el acceso; si ya tienes sesión iniciada, entra directo al panel.
 
 Si el navegador no muestra la opción de instalación, usa su menú → «Añadir a pantalla de inicio» (en iPhone: **Compartir → Añadir a pantalla de inicio**). Puedes tener ambas apps en la pantalla de inicio del teléfono.
 

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Acceso administrativo · PUNTO VIVO FRESH{% endblock %}
+{% block manifest_url %}/admin.webmanifest{% endblock %}
 {% block body %}
 <div class="login-page">
   <div class="login-decor" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -22,8 +23,10 @@
       <button type="submit" class="btn btn-primary btn-block" id="login-btn">ENTRAR AL PANEL</button>
     </form>
     <a class="back-link" href="/bienvenida">← Volver al registro de visitas</a>
+    <button class="btn btn-outline btn-sm btn-block login-install" id="admin-login-install-app" data-install-app type="button" hidden title="Instalar el panel en tu dispositivo">📲 Instalar panel</button>
   </div>
 </div>
+<div class="toast" id="toast" role="status" hidden></div>
 <script>
   const aviso = sessionStorage.getItem('pv_login_msg');
   if (aviso) {
