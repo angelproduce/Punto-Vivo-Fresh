@@ -28,11 +28,17 @@
   </section>
 
   <section class="menu-toolbar" aria-label="Búsqueda y filtros">
-    <div class="search-wrap">
-      <span aria-hidden="true">🔍</span>
-      <input type="search" id="search" placeholder="Buscar producto…" aria-label="Buscar productos">
+    <button class="filter-toggle" id="filter-toggle" type="button" aria-expanded="true" aria-controls="filter-panel">
+      <span class="filter-left"><span aria-hidden="true">🔍</span><span class="filter-toggle-label">Buscar y filtrar</span><span class="filter-dot" id="filter-dot" hidden aria-label="Filtro activo"></span></span>
+      <span class="filter-chevron" aria-hidden="true">▾</span>
+    </button>
+    <div class="filter-panel" id="filter-panel">
+      <div class="search-wrap">
+        <span aria-hidden="true">🔍</span>
+        <input type="search" id="search" placeholder="Buscar producto…" aria-label="Buscar productos">
+      </div>
+      <div class="cat-chips" id="cat-chips"><button class="chip is-active" data-cat="all">Todo</button></div>
     </div>
-    <div class="cat-chips" id="cat-chips"><button class="chip is-active" data-cat="all">Todo</button></div>
   </section>
 
   <div class="results-line"><span id="result-count">Cargando productos…</span></div>
