@@ -312,7 +312,7 @@ def run() -> None:
           '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123f" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123g" in _sw.text)
     check("57. Buscador y filtros plegables en el menú",
           'id="filter-toggle"' in _menu_tpl and 'id="filter-panel"' in _menu_tpl
           and 'aria-controls="filter-panel"' in _menu_tpl
@@ -325,7 +325,10 @@ def run() -> None:
           and ".filter-toggle.is-open .filter-chevron" in _admin_css
           and "body.pv-mobile .filter-panel{flex-direction:column" in _admin_css)
     check("60. Caché actualizada para los filtros plegables",
-          "pvf-static-20261123f" in _sw.text)
+          "pvf-static-20261123g" in _sw.text)
+    check("61. Todas las categorías visibles sin deslizar",
+          ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css
+          and "body.pv-mobile .header-actions{width:100%;gap:6px;flex-wrap:nowrap;overflow-x:auto" in _admin_css)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
