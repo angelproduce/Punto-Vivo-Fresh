@@ -303,7 +303,7 @@
     $('user-email').disabled = soloClave;
     $('user-password').value = '';
     $('user-password').required = !id;
-    $('user-password-label').textContent = id ? 'Nueva contraseña' : 'Contraseña';
+    $('user-password-title').textContent = id ? 'Nueva contraseña' : 'Contraseña';
     $('user-password-note').textContent = id
       ? 'Mínimo 10 caracteres. Déjala vacía para conservar la contraseña actual.'
       : 'Mínimo 10 caracteres. La necesitarás para entrar al panel.';

@@ -212,6 +212,12 @@ def run() -> None:
     _menu_html = client.get("/menu").text
     check("40. Botón de vista móvil/escritorio en el menú", 'id="mode-toggle"' in _menu_html)
     check("41. Contenedor de vista del menú", 'id="menu-viewport"' in _menu_html)
+    _base_ui = Path(__file__).resolve().parents[1]
+    _admin_tpl = (_base_ui / "templates" / "admin.html").read_text(encoding="utf-8")
+    _admin_js = (_base_ui / "static" / "js" / "admin.js").read_text(encoding="utf-8")
+    check("42. Campo de contraseña preservado en el modal de usuarios",
+          'id="user-password-title"' in _admin_tpl and 'id="user-password"' in _admin_tpl
+          and "user-password-title" in _admin_js and "user-password-label" not in _admin_js)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
