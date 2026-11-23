@@ -175,6 +175,8 @@ def run() -> None:
           "Pregunta por el <span>combo</span> de hoy" in client.get("/menu").text)
     check("38. Pie del menú actualizado",
           "Hecho al momento pensando en ti." in client.get("/menu").text)
+    check("39. Texto de fidelidad en bienvenida",
+          "Por tu fidelidad te premiamos." in anonimo.get("/bienvenida").text)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
