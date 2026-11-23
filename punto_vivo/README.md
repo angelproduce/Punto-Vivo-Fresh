@@ -51,7 +51,9 @@ Crear otro administrador:
 
 También puedes crear usuarios y cambiar el correo o la contraseña desde el panel, en la sección **Usuarios**. Como ya estás autenticado, no hace falta escribir la contraseña anterior: escribe la nueva y guarda. Al cambiar tu propia contraseña se cierran tus sesiones y hay que entrar de nuevo.
 
-En la cabecera del panel, el botón **📱 Modo móvil / 🖥️ Modo escritorio** cambia la vista del administrador y recuerda tu elección en este navegador.
+En la cabecera del panel, el botón **📱 Modo móvil / 🖥️ Modo escritorio** cambia la vista del administrador y recuerda tu elección en este navegador. En un teléfono, el panel entra en modo móvil automáticamente.
+
+El sitio es instalable: en el menú pulsa **📲 Instalar app**. Si el navegador no muestra la opción, usa su menú → «Añadir a pantalla de inicio» (en iPhone: **Compartir → Añadir a pantalla de inicio**).
 
 ---
 

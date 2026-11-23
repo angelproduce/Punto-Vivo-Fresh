@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import qrcode
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -191,6 +191,39 @@ def root() -> RedirectResponse:
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok", "app": "PUNTO VIVO FRESH"}
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def web_manifest() -> JSONResponse:
+    """PWA: permite instalar PUNTO VIVO FRESH en la pantalla de inicio."""
+    manifest = {
+        "id": "/",
+        "name": "PUNTO VIVO FRESH",
+        "short_name": "Punto Vivo",
+        "description": "Menú digital y control de visitas de PUNTO VIVO FRESH.",
+        "lang": "es",
+        "start_url": WELCOME_PATH,
+        "scope": "/",
+        "display": "standalone",
+        "orientation": "portrait",
+        "background_color": "#f4f8f6",
+        "theme_color": "#0b3b2e",
+        "icons": [
+            {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+        ],
+    }
+    return JSONResponse(manifest, headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/sw.js", include_in_schema=False)
+def service_worker() -> FileResponse:
+    """Service worker con alcance raíz; solo guarda recursos estáticos."""
+    return FileResponse(
+        BASE_DIR / "static" / "sw.js",
+        media_type="application/javascript",
+        headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"},
+    )
 
 
 @app.get(WELCOME_PATH, response_class=HTMLResponse)

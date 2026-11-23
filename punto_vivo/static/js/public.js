@@ -197,6 +197,39 @@
     });
   }
 
+  // -------------------------------------------------- instalar como app (PWA)
+  const installBtn = document.getElementById('install-app');
+  if (installBtn) {
+    const yaInstalada = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    if (yaInstalada) {
+      installBtn.hidden = true;
+    } else {
+      installBtn.hidden = false;
+      let promptInstalar = null;
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        promptInstalar = event;
+      });
+      installBtn.addEventListener('click', async () => {
+        if (promptInstalar) {
+          promptInstalar.prompt();
+          const {outcome} = await promptInstalar.userChoice;
+          promptInstalar = null;
+          if (outcome === 'accepted') toast('App instalada en tu dispositivo');
+          return;
+        }
+        const iphone = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        toast(iphone
+          ? 'En iPhone: pulsa Compartir y elige «Añadir a pantalla de inicio».'
+          : 'En el menú del navegador elige «Añadir a pantalla de inicio» o «Instalar app».');
+      });
+      window.addEventListener('appinstalled', () => {
+        installBtn.hidden = true;
+        toast('App instalada en tu dispositivo');
+      });
+    }
+  }
+
   fetch('/api/visita/actual').then((r) => r.ok ? r.json() : null).then((data) => {
     if (data) document.getElementById('visit-chip').textContent = `🎟️ Visita #${data.visit_number} registrada`;
   }).catch(() => {});

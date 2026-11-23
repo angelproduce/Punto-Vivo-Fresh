@@ -37,9 +37,9 @@
     const MODE_KEY = 'pv_admin_mode';
     const esMovil = (modo) => modo === 'mobile' || (modo === 'auto' && window.innerWidth <= 700);
     const aplicarModo = (modo) => {
-      document.body.classList.toggle('pv-mobile', modo === 'mobile');
-      document.body.classList.toggle('pv-desktop', modo === 'desktop');
       const movil = esMovil(modo);
+      document.body.classList.toggle('pv-mobile', movil);
+      document.body.classList.toggle('pv-desktop', modo === 'desktop');
       modeBtn.textContent = movil ? '🖥️ Modo escritorio' : '📱 Modo móvil';
       modeBtn.title = movil ? 'Cambiar a modo escritorio' : 'Cambiar a modo móvil';
       modeBtn.setAttribute('aria-pressed', String(modo !== 'auto'));
@@ -57,7 +57,7 @@
       toast(modo === 'mobile' ? 'Modo móvil activado' : 'Modo escritorio activado');
     });
     window.addEventListener('resize', () => {
-      if (!document.body.classList.contains('pv-mobile') && !document.body.classList.contains('pv-desktop')) aplicarModo('auto');
+      if (modo === 'auto') aplicarModo('auto');
     });
   }
 

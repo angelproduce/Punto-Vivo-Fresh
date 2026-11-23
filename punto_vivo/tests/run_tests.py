@@ -224,6 +224,28 @@ def run() -> None:
           'id="admin-mode-toggle"' in _admin_html and "pv_admin_mode" in _admin_js
           and "body.pv-mobile .admin-shell" in _admin_css
           and "body.pv-desktop .admin-shell" in _admin_css)
+    _manifest = anonimo.get("/manifest.webmanifest")
+    _manifest_data = _manifest.json() if _manifest.status_code == 200 else {}
+    _sizes = {icon.get("sizes") for icon in _manifest_data.get("icons", [])}
+    check("44. Manifiesto PWA para instalar",
+          _manifest.status_code == 200 and _manifest_data.get("display") == "standalone"
+          and _manifest_data.get("start_url") == "/bienvenida" and {"192x192", "512x512"} <= _sizes)
+    _sw = anonimo.get("/sw.js")
+    check("45. Service worker con alcance raíz",
+          _sw.status_code == 200 and _sw.headers.get("service-worker-allowed") == "/"
+          and "addEventListener('fetch'" in _sw.text)
+    _icons_dir = _base_ui / "static" / "icons"
+    check("46. Iconos de instalación presentes",
+          all((_icons_dir / ("icon-%d.png" % size)).stat().st_size > 0 for size in (192, 512)))
+    _base_tpl = (_base_ui / "templates" / "base.html").read_text(encoding="utf-8")
+    _menu_tpl = (_base_ui / "templates" / "menu.html").read_text(encoding="utf-8")
+    _public_js = (_base_ui / "static" / "js" / "public.js").read_text(encoding="utf-8")
+    check("47. Registro PWA y botón de instalación",
+          'rel="manifest"' in _base_tpl and "serviceWorker.register('/sw.js')" in _base_tpl
+          and 'id="install-app"' in _menu_tpl and "beforeinstallprompt" in _public_js)
+    check("48. Panel usa modo móvil automático en teléfono",
+          "document.body.classList.toggle('pv-mobile', movil)" in _admin_js
+          and "if (modo === 'auto') aplicarModo('auto')" in _admin_js)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
