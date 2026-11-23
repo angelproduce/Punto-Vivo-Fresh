@@ -312,21 +312,19 @@ def run() -> None:
           '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123g" in _sw.text)
-    check("57. Buscador y filtros plegables en el menú",
-          'id="filter-toggle"' in _menu_tpl and 'id="filter-panel"' in _menu_tpl
-          and 'aria-controls="filter-panel"' in _menu_tpl
-          and "pv_menu_filtros" in _public_js and "filtroPanel.hidden" in _public_js)
-    check("58. Indicador de filtro activo y cierre automático en teléfono",
-          'id="filter-dot"' in _menu_tpl and "cerrarFiltrosMovil" in _public_js
-          and "pintarFiltroActivo" in _public_js)
-    check("59. Estilos del panel plegable",
-          ".filter-panel[hidden]{display:none !important}" in _admin_css
-          and ".filter-toggle.is-open .filter-chevron" in _admin_css
-          and "body.pv-mobile .filter-panel{flex-direction:column" in _admin_css)
-    check("60. Caché actualizada para los filtros plegables",
-          "pvf-static-20261123g" in _sw.text)
-    check("61. Todas las categorías visibles sin deslizar",
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123h" in _sw.text)
+    check("57. Buscador y filtros siempre visibles, sin plegable",
+          'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
+          and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
+          and "pv_menu_filtros" not in _public_js and "filtroPanel.hidden" not in _public_js)
+    check("58. Búsqueda y selección de categorías siguen funcionando",
+          "getElementById('search').addEventListener" in _public_js
+          and "state.q = e.target.value" in _public_js
+          and "state.categoria = chip.dataset.cat" in _public_js)
+    check("59. Sin estilos ni caché del plegable",
+          ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
+          and "pvf-static-20261123g" not in _sw.text and "pvf-static-20261123h" in _sw.text)
+    check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css
           and "body.pv-mobile .header-actions{width:100%;gap:6px;flex-wrap:nowrap;overflow-x:auto" in _admin_css)
 

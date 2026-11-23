@@ -104,7 +104,7 @@ Reglas importantes:
 
 ## 4. Menú y administración
 
-- **Público:** búsqueda y filtros por categoría en un panel plegable (en el teléfono empieza cerrado; al elegir una categoría se cierra y muestra un punto si hay un filtro activo), ficha de producto, botón compartir, aviso de datos de demostración.
+- **Público:** búsqueda y filtros por categoría siempre visibles (todas las categorías se muestran en filas, sin deslizar), ficha de producto, botón compartir, aviso de datos de demostración.
 - **Panel:** resumen con KPIs y gráfico de 7 días, top de clientes, gestión de clientes con historial, gestión de visitas con búsqueda y filtros de fecha, exportación CSV (clientes y visitas), CRUD de productos y categorías, activación/desactivación, orden, subida de fotos (redimensionadas a WebP).
 - **QR:** descarga PNG y SVG del mismo enlace permanente al formulario de registro.
 

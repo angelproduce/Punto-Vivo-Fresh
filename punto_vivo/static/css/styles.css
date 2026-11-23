@@ -126,15 +126,6 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
 .menu-hero p{color:rgba(255,255,255,.8);margin:0}
 .menu-hero-art{font-size:clamp(50px,7vw,90px);filter:drop-shadow(0 16px 24px rgba(0,0,0,.32));position:relative;z-index:1;letter-spacing:-12px}
 .menu-toolbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:26px;position:sticky;top:76px;z-index:20;background:var(--fondo);padding:10px 0}
-.filter-toggle{width:100%;min-height:44px;border:1.5px solid var(--linea);background:#fff;color:var(--texto);border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:750;font-size:14px;text-align:left}
-.filter-toggle:hover{border-color:var(--verde)}
-.filter-left{display:flex;align-items:center;gap:9px;min-width:0}
-.filter-chevron{color:var(--muted);font-size:13px;transition:transform .2s ease}
-.filter-toggle.is-open .filter-chevron{transform:rotate(180deg)}
-.filter-dot{width:8px;height:8px;border-radius:50%;background:var(--verde);flex:none}
-.filter-dot[hidden]{display:none}
-.filter-panel{display:flex;gap:14px;align-items:center;flex-wrap:wrap;width:100%}
-.filter-panel[hidden]{display:none !important}
 .search-wrap{position:relative;flex:1;min-width:230px}
 .search-wrap span{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:15px}
 .search-wrap input{width:100%;padding:13px 14px 13px 42px;border:1.5px solid var(--linea);border-radius:13px;background:#fff;outline:none}
@@ -310,9 +301,6 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
   .header-actions{width:100%;justify-content:space-between}
   .menu-main{padding:18px 14px 50px}
   .visit-chip{font-size:11px}
-  .filter-toggle{min-height:44px;font-size:13px;padding:9px 12px}
-  .filter-panel{flex-direction:column;align-items:stretch;gap:9px}
-  .filter-panel .search-wrap{min-width:0;width:100%}
 }
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
 
@@ -338,8 +326,6 @@ body.pv-mobile .menu-hero h1{font-size:24px;margin:10px 0 6px}
 body.pv-mobile .menu-hero p{font-size:12px}
 body.pv-mobile .menu-hero-art{font-size:40px;letter-spacing:-5px}
 body.pv-mobile .menu-toolbar{position:static;margin:12px 0 0;gap:9px;flex-direction:column;align-items:stretch;padding:0}
-body.pv-mobile .filter-toggle{min-height:44px;font-size:13px;padding:9px 12px}
-body.pv-mobile .filter-panel{flex-direction:column;align-items:stretch;gap:9px}
 body.pv-mobile .search-wrap{min-width:0;width:100%}
 body.pv-mobile .search-wrap input{min-height:44px}
 body.pv-mobile .chip{min-height:38px;padding:8px 13px;font-size:12px}

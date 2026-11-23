@@ -90,52 +90,6 @@
   const detail = document.getElementById('product-detail');
   const fallbackIcon = {'Hamburguesas':'🍔','Sándwiches':'🥪','Papas fritas y acompañantes':'🍟','Jugos naturales':'🧃','Batidas':'🥤','Ensaladas':'🥗'};
 
-  // -------------------------------------------------- búsqueda y filtros plegables
-  const filtroBtn = document.getElementById('filter-toggle');
-  const filtroPanel = document.getElementById('filter-panel');
-  const filtroDot = document.getElementById('filter-dot');
-  const FILTRO_KEY = 'pv_menu_filtros';
-  let cerrarFiltrosMovil = () => {};
-  let filtroAbierto = true;
-  if (filtroBtn && filtroPanel) {
-    let modoGuardado = '';
-    try { modoGuardado = localStorage.getItem('pv_menu_mode') || ''; } catch (e) { /* almacenamiento bloqueado */ }
-    const enTelefono = () => window.innerWidth <= 700 ||
-      document.body.classList.contains('pv-mobile') || modoGuardado === 'mobile';
-    try {
-      const guardado = localStorage.getItem(FILTRO_KEY);
-      filtroAbierto = guardado === null ? !enTelefono() : guardado === '1';
-    } catch (e) { filtroAbierto = !enTelefono(); }
-    const pintarFiltro = () => {
-      filtroPanel.hidden = !filtroAbierto;
-      filtroBtn.classList.toggle('is-open', filtroAbierto);
-      filtroBtn.setAttribute('aria-expanded', String(filtroAbierto));
-      const flecha = filtroBtn.querySelector('.filter-chevron');
-      const etiqueta = filtroBtn.querySelector('.filter-toggle-label');
-      if (flecha) flecha.textContent = filtroAbierto ? '▴' : '▾';
-      if (etiqueta) etiqueta.textContent = filtroAbierto ? 'Ocultar búsqueda y filtros' : 'Buscar y filtrar';
-    };
-    const guardarFiltro = () => {
-      try { localStorage.setItem(FILTRO_KEY, filtroAbierto ? '1' : '0'); } catch (e) { /* almacenamiento bloqueado */ }
-    };
-    pintarFiltro();
-    filtroBtn.addEventListener('click', () => {
-      filtroAbierto = !filtroAbierto;
-      pintarFiltro();
-      guardarFiltro();
-    });
-    cerrarFiltrosMovil = () => {
-      if (filtroAbierto && enTelefono()) {
-        filtroAbierto = false;
-        pintarFiltro();
-        guardarFiltro();
-      }
-    };
-  }
-  const pintarFiltroActivo = () => {
-    if (filtroDot) filtroDot.hidden = !state.q.trim() && state.categoria === 'all';
-  };
-
   const toast = (text) => {
     const el = document.getElementById('toast');
     el.textContent = text;
@@ -203,11 +157,7 @@
 
   document.getElementById('close-product').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
-  document.getElementById('search').addEventListener('input', (e) => {
-    state.q = e.target.value;
-    pintarFiltroActivo();
-    render();
-  });
+  document.getElementById('search').addEventListener('input', (e) => { state.q = e.target.value; render(); });
 
   document.getElementById('share-menu').addEventListener('click', async () => {
     const url = location.origin + '/bienvenida';
@@ -262,8 +212,6 @@
     chips.querySelectorAll('.chip').forEach((chip) => chip.addEventListener('click', () => {
       state.categoria = chip.dataset.cat;
       chips.querySelectorAll('.chip').forEach((c) => c.classList.toggle('is-active', c === chip));
-      pintarFiltroActivo();
-      cerrarFiltrosMovil();
       render();
     }));
     render();
