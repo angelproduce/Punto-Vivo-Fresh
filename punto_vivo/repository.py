@@ -411,6 +411,19 @@ def list_admins() -> list[dict[str, Any]]:
     return _local_all("SELECT id, email, role, created_at FROM admins ORDER BY id")
 
 
+def get_admin_by_id(admin_id: Any) -> dict[str, Any] | None:
+    if supabase_enabled():
+        return _row("admins", {"id": f"eq.{admin_id}", "select": "id,email,role,created_at"})
+    return _local_one("SELECT id, email, role, created_at FROM admins WHERE id = ?", (admin_id,))
+
+
+def update_admin_email(admin_id: Any, email: str) -> None:
+    if supabase_enabled():
+        _update("admins", admin_id, {"email": email})
+    else:
+        db.execute("UPDATE admins SET email = ? WHERE id = ?", (email, admin_id))
+
+
 def create_admin(email: str, password_hash: str, role: str, created_at: str) -> int:
     if supabase_enabled():
         return _insert("admins", {

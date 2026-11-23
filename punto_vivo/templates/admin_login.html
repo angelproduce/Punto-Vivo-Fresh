@@ -25,11 +25,20 @@
   </div>
 </div>
 <script>
+  const aviso = sessionStorage.getItem('pv_login_msg');
+  if (aviso) {
+    const inicial = document.getElementById('login-msg');
+    inicial.textContent = aviso;
+    inicial.className = 'msg ok';
+    inicial.hidden = false;
+    sessionStorage.removeItem('pv_login_msg');
+  }
   document.getElementById('login-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const btn = document.getElementById('login-btn');
     const msg = document.getElementById('login-msg');
     msg.hidden = true;
+    msg.className = 'msg';
     btn.disabled = true;
     btn.textContent = 'Verificando…';
     try {

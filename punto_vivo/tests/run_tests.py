@@ -118,6 +118,31 @@ def run() -> None:
     resumen = anonimo.get("/api/admin/resumen").json()
     check("8e. Resumen con totales", resumen["total_clientes"] == 1 and resumen["total_visitas"] == 2)
 
+    # 8f: gestión de usuarios y contraseñas desde el panel
+    listado = anonimo.get("/api/admin/usuarios", headers=admin_headers())
+    check("8f. Usuarios sin hash de contraseña",
+          listado.status_code == 200 and all("password_hash" not in u for u in listado.json()["usuarios"]))
+    nuevo = anonimo.post("/api/admin/usuarios", headers=admin_headers(),
+                         json={"email": "segundo@pruebas.local", "password": "ClaveSegunda123!"})
+    check("8g. Crear usuario", nuevo.status_code == 200, nuevo.text)
+    duplicado = anonimo.post("/api/admin/usuarios", headers=admin_headers(),
+                             json={"email": "segundo@pruebas.local", "password": "OtraClave123!"})
+    check("8h. Correo duplicado rechazado", duplicado.status_code == 409)
+    corta = anonimo.post("/api/admin/usuarios", headers=admin_headers(),
+                         json={"email": "tercero@pruebas.local", "password": "corta"})
+    check("8i. Contraseña corta rechazada", corta.status_code == 400)
+    uid = nuevo.json()["id"]
+    editado = anonimo.put(f"/api/admin/usuarios/{uid}", headers=admin_headers(),
+                          json={"email": "segundo2@pruebas.local", "password": "ClaveNueva123!"})
+    check("8j. Cambiar correo y contraseña", editado.status_code == 200, editado.text)
+    otro = TestClient(app)
+    acceso = otro.post("/api/admin/login",
+                       json={"email": "segundo2@pruebas.local", "password": "ClaveNueva123!"})
+    check("8k. El nuevo usuario puede entrar", acceso.status_code == 200, acceso.text)
+    propio = anonimo.put(f"/api/admin/usuarios/{listado.json()['mi_id']}", headers=admin_headers(),
+                         json={"email": ADMIN_EMAIL, "password": "CambioPropio123!"})
+    check("8l. Cambio propio exige contraseña actual", propio.status_code == 400)
+
     # 7: QR siempre al formulario + formatos
     info = anonimo.get("/api/admin/qr/info", headers=admin_headers()).json()
     check("7a. QR apunta al registro", info["url"].endswith("/bienvenida"))

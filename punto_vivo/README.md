@@ -49,6 +49,8 @@ Crear otro administrador:
 .venv\Scripts\python.exe -m punto_vivo.admin create --email otro@correo.com
 ```
 
+También puedes crear usuarios y cambiar el correo o la contraseña desde el panel, en la sección **Usuarios**. Para cambiar tu propia contraseña debes escribir la contraseña actual; al guardarla se cierran tus sesiones y hay que entrar de nuevo.
+
 ---
 
 ## 2. Configuración

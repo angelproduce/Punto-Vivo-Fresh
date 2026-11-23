@@ -2,6 +2,7 @@
 {% block title %}Panel administrativo · PUNTO VIVO FRESH{% endblock %}
 {% block body %}
 <meta name="pv-csrf" content="{{ csrf }}">
+<meta name="pv-admin-id" content="{{ admin_id }}">
 <div class="admin-shell">
   <aside class="admin-sidebar">
     <div class="brand brand-light">
@@ -14,6 +15,7 @@
       <button class="nav-item" data-section="clientes"><span>👥</span> Clientes</button>
       <button class="nav-item" data-section="visitas"><span>🎟️</span> Visitas</button>
       <button class="nav-item" data-section="menu"><span>🍔</span> Administrar menú</button>
+      <button class="nav-item" data-section="usuarios"><span>🔐</span> Usuarios</button>
       <button class="nav-item" data-section="qr"><span>🔳</span> Código QR</button>
     </nav>
     <div class="sidebar-bottom">
@@ -104,6 +106,17 @@
       </div>
     </section>
 
+    <!-- ---------------------------------------------------- USUARIOS -->
+    <section class="admin-section" id="section-usuarios">
+      <div class="panel">
+        <div class="panel-head"><div><h2>Usuarios y contraseñas</h2><p>Agrega accesos nuevos o cambia el correo y la contraseña de cada usuario</p></div>
+          <button class="btn btn-primary btn-sm" id="btn-nuevo-usuario">+ Nuevo usuario</button>
+        </div>
+        <div class="notice notice-warn" id="usuarios-nota"><span>🔒</span><div>Las contraseñas se guardan cifradas. Al cambiar la contraseña se cierran las sesiones de ese usuario.</div></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Correo electrónico</th><th>Rol</th><th>Creado</th><th></th></tr></thead><tbody id="usuarios-body"></tbody></table></div>
+      </div>
+    </section>
+
     <!-- ---------------------------------------------------- QR -->
     <section class="admin-section" id="section-qr">
       <div class="panel qr-panel">
@@ -151,6 +164,22 @@
           <label class="check-label"><input type="checkbox" id="prod-demo"> Marcar como dato de demostración</label>
         </div>
         <div class="modal-foot"><button type="button" class="btn btn-outline" data-close="product-backdrop">Cancelar</button><button type="submit" class="btn btn-primary" id="prod-submit">Guardar producto</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="user-backdrop">
+  <div class="modal-card">
+    <div class="modal-head"><h2 id="user-modal-title">Nuevo usuario</h2><button class="icon-btn" data-close="user-backdrop">✕</button></div>
+    <div class="modal-body">
+      <form id="user-form" class="product-form">
+        <input type="hidden" id="user-id">
+        <label>Correo electrónico<input type="email" id="user-email" required maxlength="120" autocomplete="username" placeholder="usuario@ejemplo.com"></label>
+        <label id="user-current-wrap" class="hidden">Contraseña actual<input type="password" id="user-current" autocomplete="current-password" placeholder="Solo si cambias tu propia contraseña"></label>
+        <label id="user-password-label">Contraseña<input type="password" id="user-password" minlength="10" autocomplete="new-password" placeholder="Mínimo 10 caracteres"></label>
+        <p class="small-note" id="user-password-note">Mínimo 10 caracteres. Déjala vacía para conservar la contraseña actual.</p>
+        <div class="modal-foot"><button type="button" class="btn btn-outline" data-close="user-backdrop">Cancelar</button><button type="submit" class="btn btn-primary" id="user-submit">Crear usuario</button></div>
       </form>
     </div>
   </div>

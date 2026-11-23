@@ -16,12 +16,21 @@ from .security import hash_password
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
 
 
-def create_admin(email: str, password: str, role: str = "admin") -> int:
+def validar_email(email: str) -> str:
     email = email.strip().lower()
     if not EMAIL_RE.match(email):
         raise ValueError("Correo electrónico inválido.")
+    return email
+
+
+def validar_password(password: str) -> None:
     if len(password) < 10:
         raise ValueError("La contraseña debe tener al menos 10 caracteres.")
+
+
+def create_admin(email: str, password: str, role: str = "admin") -> int:
+    email = validar_email(email)
+    validar_password(password)
     if repository.get_admin_by_email(email):
         raise ValueError("Ya existe un administrador con ese correo.")
     return repository.create_admin(
@@ -30,9 +39,8 @@ def create_admin(email: str, password: str, role: str = "admin") -> int:
 
 
 def change_password(email: str, password: str) -> None:
-    if len(password) < 10:
-        raise ValueError("La contraseña debe tener al menos 10 caracteres.")
-    row = repository.get_admin_by_email(email.strip().lower())
+    validar_password(password)
+    row = repository.get_admin_by_email(validar_email(email))
     if row is None:
         raise ValueError("No existe ese administrador.")
     repository.change_admin_password(row["id"], hash_password(password))

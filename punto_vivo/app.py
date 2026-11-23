@@ -116,6 +116,27 @@ def categoria_activa(categoria_id: int) -> None:
         raise HTTPException(status_code=400, detail="La categoría no existe o está inactiva.")
 
 
+def validar_correo_admin(email: str) -> str:
+    try:
+        return admin_tools.validar_email(email)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+def validar_clave_admin(password: str) -> None:
+    try:
+        admin_tools.validar_password(password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+def error_correo_duplicado(exc: Exception) -> HTTPException | None:
+    texto = str(exc).lower()
+    if any(pista in texto for pista in ("ya existe", "duplicate", "23505", "unique violation")):
+        return HTTPException(status_code=409, detail="Ya existe un administrador con ese correo.")
+    return None
+
+
 # ------------------------------------------------------------------ modelos
 
 class VisitIn(BaseModel):
@@ -129,6 +150,17 @@ class VisitIn(BaseModel):
 class LoginIn(BaseModel):
     email: str
     password: str
+
+
+class AdminUserIn(BaseModel):
+    email: str
+    password: str
+
+
+class AdminUserUpdateIn(BaseModel):
+    email: str
+    password: str = ""
+    current_password: str = ""
 
 
 class CategoryIn(BaseModel):
@@ -313,7 +345,69 @@ def api_admin_logout(request: Request, session=Depends(require_admin)) -> JSONRe
 
 @app.get("/api/admin/me")
 def api_admin_me(session=Depends(require_admin)) -> dict[str, Any]:
-    return {"email": session["email"], "role": session["role"], "csrf_token": session["csrf_token"]}
+    return {
+        "id": session["admin_id"], "email": session["email"],
+        "role": session["role"], "csrf_token": session["csrf_token"],
+    }
+
+
+# ------------------------------------------------------------------ usuarios del panel
+
+@app.get("/api/admin/usuarios")
+def api_usuarios(session=Depends(require_admin)) -> dict[str, Any]:
+    return {
+        "usuarios": [dict(row) for row in repository.list_admins()],
+        "mi_id": session["admin_id"],
+    }
+
+
+@app.post("/api/admin/usuarios")
+def crear_usuario(payload: AdminUserIn, session=Depends(require_admin)) -> dict[str, Any]:
+    email = validar_correo_admin(payload.email)
+    validar_clave_admin(payload.password)
+    if repository.get_admin_by_email(email):
+        raise HTTPException(status_code=409, detail="Ya existe un administrador con ese correo.")
+    try:
+        new_id = admin_tools.create_admin(email, payload.password)
+    except Exception as exc:
+        duplicado = error_correo_duplicado(exc)
+        if duplicado is not None:
+            raise duplicado
+        if isinstance(exc, ValueError):
+            raise HTTPException(status_code=400, detail=str(exc))
+        raise
+    return {"ok": True, "id": new_id}
+
+
+@app.put("/api/admin/usuarios/{admin_id}")
+def editar_usuario(admin_id: int, payload: AdminUserUpdateIn,
+                   session=Depends(require_admin)) -> dict[str, Any]:
+    if repository.get_admin_by_id(admin_id) is None:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    email = validar_correo_admin(payload.email)
+    otro = repository.get_admin_by_email(email)
+    if otro is not None and int(otro["id"]) != admin_id:
+        raise HTTPException(status_code=409, detail="Ya existe un administrador con ese correo.")
+
+    es_yo = int(session["admin_id"]) == admin_id
+    cambia_clave = bool(payload.password)
+    if cambia_clave:
+        validar_clave_admin(payload.password)
+        if es_yo:
+            fila = repository.get_admin_by_email(session["email"])
+            if fila is None or not security.verify_password(payload.current_password, fila["password_hash"]):
+                raise HTTPException(status_code=400, detail="La contraseña actual no es correcta.")
+    try:
+        repository.update_admin_email(admin_id, email)
+        if cambia_clave:
+            repository.change_admin_password(admin_id, security.hash_password(payload.password))
+            repository.delete_sessions_by_admin(admin_id)
+    except Exception as exc:
+        duplicado = error_correo_duplicado(exc)
+        if duplicado is not None:
+            raise duplicado
+        raise
+    return {"ok": True, "email": email, "cerrar_sesion": es_yo and cambia_clave}
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -322,7 +416,10 @@ def admin_page(request: Request) -> Response:
     if session is None:
         return RedirectResponse("/admin/login", status_code=302)
     return templates.TemplateResponse(
-        request, "admin.html", public_context(request, admin_email=session["email"], csrf=session["csrf_token"])
+        request, "admin.html", public_context(
+            request, admin_email=session["email"], admin_id=session["admin_id"],
+            csrf=session["csrf_token"],
+        )
     )
 
 

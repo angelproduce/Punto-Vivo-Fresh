@@ -91,7 +91,7 @@ Si usas la CLI: `npm i -g vercel` y `vercel --prod` desde la raíz del proyecto.
 
 El admin de tu PC está en SQLite local y **no existe** en Supabase. Elige una de estas dos formas:
 
-**A) Por variables de entorno (la más fácil en Vercel):** rellena `PV_ADMIN_EMAIL` y `PV_ADMIN_PASSWORD` antes del primer despliegue. La app crea el admin al arrancar. Cámbiala después si la pusiste provisional.
+**A) Por variables de entorno (la más fácil en Vercel):** rellena `PV_ADMIN_EMAIL` y `PV_ADMIN_PASSWORD` antes del primer despliegue. La app crea el admin al arrancar. Cámbiala después si la pusiste provisional. Esas variables solo crean el primer usuario; para añadir usuarios o cambiar correo/contraseña entra al panel, sección **Usuarios**.
 
 **B) Desde tu PC apuntando a Supabase:** sin tocar archivos, en PowerShell:
 

@@ -31,7 +31,7 @@
     el._timer = setTimeout(() => { el.hidden = true; }, 3200);
   }
 
-  const titles = {resumen:'Resumen', clientes:'Clientes', visitas:'Visitas', menu:'Administrar menú', qr:'Código QR'};
+  const titles = {resumen:'Resumen', clientes:'Clientes', visitas:'Visitas', menu:'Administrar menú', usuarios:'Usuarios', qr:'Código QR'};
   document.querySelectorAll('#admin-nav .nav-item').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#admin-nav .nav-item').forEach((b) => b.classList.toggle('is-active', b === btn));
@@ -48,6 +48,7 @@
     if (name === 'clientes') loadClientes();
     if (name === 'visitas') loadVisitas();
     if (name === 'menu') { loadCategorias(); loadProductos(); }
+    if (name === 'usuarios') loadUsuarios();
     if (name === 'qr') loadQr();
   }
 
@@ -266,6 +267,89 @@
       toast(id ? 'Producto actualizado' : 'Producto creado');
       $('product-backdrop').classList.add('hidden');
       loadProductos();
+    } catch (err) { toast(err.message, true); }
+    finally { submit.disabled = false; }
+  });
+
+  // -------------------------------------------------- usuarios y contraseñas
+  const miId = Number(document.querySelector('meta[name="pv-admin-id"]')?.content || 0);
+  let usuariosCache = [];
+
+  async function loadUsuarios() {
+    try {
+      const d = await api('/api/admin/usuarios');
+      usuariosCache = d.usuarios || [];
+      $('usuarios-body').innerHTML = usuariosCache.map((u) => `
+        <tr>
+          <td><strong>${esc(u.email)}</strong>${Number(u.id) === miId ? ' <span class="tag">Tú</span>' : ''}</td>
+          <td><span class="tag ${u.role === 'admin' ? '' : 'off'}">${esc(u.role)}</span></td>
+          <td>${esc(String(u.created_at || '').slice(0, 10))}</td>
+          <td><div class="row-actions">
+            <button class="mini-btn" data-user-edit="${u.id}">Editar</button>
+            <button class="mini-btn" data-user-pass="${u.id}">Contraseña</button>
+          </div></td>
+        </tr>`).join('') || '<tr><td colspan="4">No hay usuarios.</td></tr>';
+      document.querySelectorAll('[data-user-edit]').forEach((b) =>
+        b.addEventListener('click', () => openUsuario(Number(b.dataset.userEdit))));
+      document.querySelectorAll('[data-user-pass]').forEach((b) =>
+        b.addEventListener('click', () => openUsuario(Number(b.dataset.userPass), true)));
+    } catch (e) { toast(e.message, true); }
+  }
+
+  function openUsuario(id = 0, soloClave = false) {
+    const yo = Number(id) === miId;
+    const fila = usuariosCache.find((u) => Number(u.id) === Number(id));
+    $('user-id').value = id || '';
+    $('user-email').value = id ? (fila?.email || '') : '';
+    $('user-email').disabled = soloClave;
+    $('user-password').value = '';
+    $('user-current').value = '';
+    $('user-current-wrap').classList.toggle('hidden', !yo);
+    $('user-password').required = !id;
+    $('user-password-label').textContent = id ? 'Nueva contraseña' : 'Contraseña';
+    $('user-password-note').textContent = id
+      ? 'Mínimo 10 caracteres. Déjala vacía para conservar la contraseña actual.'
+      : 'Mínimo 10 caracteres. La necesitarás para entrar al panel.';
+    $('user-modal-title').textContent = !id ? 'Nuevo usuario' : (soloClave ? 'Cambiar contraseña' : 'Editar usuario');
+    $('user-submit').textContent = !id ? 'Crear usuario' : 'Guardar cambios';
+    $('user-backdrop').classList.remove('hidden');
+    setTimeout(() => $(soloClave ? 'user-password' : 'user-email').focus(), 0);
+  }
+
+  $('btn-nuevo-usuario').addEventListener('click', () => openUsuario());
+  $('user-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const submit = $('user-submit');
+    const id = $('user-id').value;
+    const email = $('user-email').value.trim();
+    const password = $('user-password').value;
+    if (id && password && password.length < 10) {
+      toast('La contraseña debe tener al menos 10 caracteres.', true); return;
+    }
+    if (id && password && Number(id) === miId && !$('user-current').value) {
+      toast('Escribe tu contraseña actual para cambiarla.', true); return;
+    }
+    submit.disabled = true;
+    try {
+      if (!id) {
+        await api('/api/admin/usuarios', {method:'POST', body:{email, password}});
+      } else {
+        const body = {email};
+        if (password) {
+          body.password = password;
+          body.current_password = $('user-current').value;
+        }
+        const resultado = await api('/api/admin/usuarios/' + id, {method:'PUT', body});
+        if (resultado.cerrar_sesion) {
+          sessionStorage.setItem('pv_login_msg', 'Contraseña actualizada. Inicia sesión con la nueva contraseña.');
+          sessionStorage.removeItem('pv_csrf');
+          location.href = '/admin/login';
+          return;
+        }
+      }
+      $('user-backdrop').classList.add('hidden');
+      toast(id ? 'Usuario actualizado' : 'Usuario creado');
+      loadUsuarios();
     } catch (err) { toast(err.message, true); }
     finally { submit.disabled = false; }
   });
