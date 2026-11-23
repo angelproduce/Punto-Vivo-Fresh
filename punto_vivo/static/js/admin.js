@@ -297,14 +297,11 @@
   }
 
   function openUsuario(id = 0, soloClave = false) {
-    const yo = Number(id) === miId;
     const fila = usuariosCache.find((u) => Number(u.id) === Number(id));
     $('user-id').value = id || '';
     $('user-email').value = id ? (fila?.email || '') : '';
     $('user-email').disabled = soloClave;
     $('user-password').value = '';
-    $('user-current').value = '';
-    $('user-current-wrap').classList.toggle('hidden', !yo);
     $('user-password').required = !id;
     $('user-password-label').textContent = id ? 'Nueva contraseña' : 'Contraseña';
     $('user-password-note').textContent = id
@@ -326,9 +323,6 @@
     if (id && password && password.length < 10) {
       toast('La contraseña debe tener al menos 10 caracteres.', true); return;
     }
-    if (id && password && Number(id) === miId && !$('user-current').value) {
-      toast('Escribe tu contraseña actual para cambiarla.', true); return;
-    }
     submit.disabled = true;
     try {
       if (!id) {
@@ -337,7 +331,6 @@
         const body = {email};
         if (password) {
           body.password = password;
-          body.current_password = $('user-current').value;
         }
         const resultado = await api('/api/admin/usuarios/' + id, {method:'PUT', body});
         if (resultado.cerrar_sesion) {

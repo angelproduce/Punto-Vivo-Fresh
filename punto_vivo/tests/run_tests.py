@@ -139,9 +139,16 @@ def run() -> None:
     acceso = otro.post("/api/admin/login",
                        json={"email": "segundo2@pruebas.local", "password": "ClaveNueva123!"})
     check("8k. El nuevo usuario puede entrar", acceso.status_code == 200, acceso.text)
-    propio = anonimo.put(f"/api/admin/usuarios/{listado.json()['mi_id']}", headers=admin_headers(),
-                         json={"email": ADMIN_EMAIL, "password": "CambioPropio123!"})
-    check("8l. Cambio propio exige contraseña actual", propio.status_code == 400)
+    id_otro = otro.get("/api/admin/usuarios").json()["mi_id"]
+    headers_otro = {"X-CSRF-Token": acceso.json()["csrf_token"]}
+    propio = otro.put(f"/api/admin/usuarios/{id_otro}", headers=headers_otro,
+                      json={"email": "segundo2@pruebas.local", "password": "ClavePropia123!"})
+    check("8l. Cambiar contraseña propia sin contraseña anterior",
+          propio.status_code == 200 and propio.json().get("cerrar_sesion") is True, propio.text)
+    verificar = TestClient(app)
+    acceso_nuevo = verificar.post("/api/admin/login",
+                                  json={"email": "segundo2@pruebas.local", "password": "ClavePropia123!"})
+    check("8m. La nueva contraseña propia funciona", acceso_nuevo.status_code == 200, acceso_nuevo.text)
 
     # 7: QR siempre al formulario + formatos
     info = anonimo.get("/api/admin/qr/info", headers=admin_headers()).json()

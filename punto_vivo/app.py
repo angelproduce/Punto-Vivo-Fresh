@@ -160,7 +160,6 @@ class AdminUserIn(BaseModel):
 class AdminUserUpdateIn(BaseModel):
     email: str
     password: str = ""
-    current_password: str = ""
 
 
 class CategoryIn(BaseModel):
@@ -393,10 +392,6 @@ def editar_usuario(admin_id: int, payload: AdminUserUpdateIn,
     cambia_clave = bool(payload.password)
     if cambia_clave:
         validar_clave_admin(payload.password)
-        if es_yo:
-            fila = repository.get_admin_by_email(session["email"])
-            if fila is None or not security.verify_password(payload.current_password, fila["password_hash"]):
-                raise HTTPException(status_code=400, detail="La contraseña actual no es correcta.")
     try:
         repository.update_admin_email(admin_id, email)
         if cambia_clave:
