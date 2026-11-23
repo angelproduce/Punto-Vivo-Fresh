@@ -125,8 +125,6 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
 .menu-hero h1 span{color:var(--amarillo)}
 .menu-hero p{color:rgba(255,255,255,.8);margin:0}
 .menu-hero-art{font-size:clamp(50px,7vw,90px);filter:drop-shadow(0 16px 24px rgba(0,0,0,.32));position:relative;z-index:1;letter-spacing:-12px}
-.demo-notice{display:flex;gap:12px;align-items:flex-start;background:var(--amarillo-claro);border:1px solid #f0dda0;color:#6a4e00;border-radius:14px;padding:13px 16px;margin:20px 0 6px;font-size:13px}
-.demo-notice p{margin:0}
 .menu-toolbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:26px;position:sticky;top:76px;z-index:20;background:var(--fondo);padding:10px 0}
 .search-wrap{position:relative;flex:1;min-width:230px}
 .search-wrap span{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:15px}

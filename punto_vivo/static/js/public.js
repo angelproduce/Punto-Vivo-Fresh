@@ -177,7 +177,6 @@
   }).then((data) => {
     if (!data) return;
     state.productos = data.productos;
-    if (data.productos.some((p) => p.is_demo)) document.getElementById('demo-notice').hidden = false;
     chips.innerHTML = '<button class="chip is-active" data-cat="all">Todo</button>' +
       data.categorias.map((c) => `<button class="chip" data-cat="${c.id}">${esc(c.name)}</button>`).join('');
     chips.querySelectorAll('.chip').forEach((chip) => chip.addEventListener('click', () => {
