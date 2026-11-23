@@ -218,6 +218,12 @@ def run() -> None:
     check("42. Campo de contraseña preservado en el modal de usuarios",
           'id="user-password-title"' in _admin_tpl and 'id="user-password"' in _admin_tpl
           and "user-password-title" in _admin_js and "user-password-label" not in _admin_js)
+    _admin_html = anonimo.get("/admin").text
+    _admin_css = (_base_ui / "static" / "css" / "styles.css").read_text(encoding="utf-8")
+    check("43. Selector de vista móvil/escritorio en el panel",
+          'id="admin-mode-toggle"' in _admin_html and "pv_admin_mode" in _admin_js
+          and "body.pv-mobile .admin-shell" in _admin_css
+          and "body.pv-desktop .admin-shell" in _admin_css)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config

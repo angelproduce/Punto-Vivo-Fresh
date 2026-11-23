@@ -28,7 +28,10 @@
   <main class="admin-main">
     <header class="admin-topbar">
       <div><span class="eyebrow">PANEL ADMINISTRATIVO</span><h1 id="section-title">Resumen</h1></div>
-      <span class="live-badge"><i></i> Sistema activo</span>
+      <div class="admin-topbar-actions">
+        <button class="btn btn-ghost btn-sm" id="admin-mode-toggle" type="button" aria-pressed="false" title="Cambiar entre modo móvil y escritorio">📱 Modo móvil</button>
+        <span class="live-badge"><i></i> Sistema activo</span>
+      </div>
     </header>
 
     <div id="toast" class="toast" hidden></div>

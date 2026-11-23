@@ -331,3 +331,51 @@ body.pv-desktop .product-grid{grid-template-columns:repeat(auto-fill,minmax(250p
 body.pv-desktop .product-image{height:180px}
 body.pv-desktop .product-body{padding:16px}
 body.pv-desktop .product-body h3{font-size:17px}
+
+/* ------------------------------- selector de vista del panel administrativo */
+#admin-mode-toggle{white-space:nowrap}
+.admin-topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+body.pv-mobile .admin-shell{max-width:430px;margin:0 auto;background:#fff;border-left:1px solid var(--linea);border-right:1px solid var(--linea);box-shadow:0 0 45px -22px rgba(11,59,46,.5)}
+body.pv-mobile .admin-sidebar{position:relative;height:auto;padding:14px 12px;gap:10px}
+body.pv-mobile .admin-nav{flex-direction:row;flex-wrap:wrap;flex:1;gap:5px}
+body.pv-mobile .admin-nav .nav-item{padding:9px 10px;font-size:12px;gap:7px;border-radius:9px}
+body.pv-mobile .admin-nav .nav-item span{font-size:15px}
+body.pv-mobile .sidebar-bottom{margin-top:0;flex-direction:row;flex-wrap:wrap;gap:6px}
+body.pv-mobile .sidebar-bottom .btn-ghost{font-size:11px;padding:7px 9px}
+body.pv-mobile .admin-main{padding:16px 14px 50px}
+body.pv-mobile .admin-topbar{flex-direction:column;align-items:flex-start;margin-bottom:18px;gap:10px}
+body.pv-mobile .admin-topbar h1{font-size:23px}
+body.pv-mobile .live-badge{font-size:10px;padding:6px 10px}
+body.pv-mobile .stat-grid{grid-template-columns:1fr;gap:10px;margin-bottom:16px}
+body.pv-mobile .stat-card{padding:13px}
+body.pv-mobile .stat-card strong{font-size:23px}
+body.pv-mobile .admin-grid-2{grid-template-columns:1fr;gap:12px}
+body.pv-mobile .panel{padding:15px;border-radius:14px}
+body.pv-mobile .panel-head h2{font-size:15px}
+body.pv-mobile .chart{height:180px}
+body.pv-mobile .data-table{min-width:460px}
+body.pv-mobile .qr-panel{grid-template-columns:1fr;gap:18px}
+body.pv-mobile .qr-preview{padding:16px}
+body.pv-mobile .qr-preview img{max-width:190px}
+body.pv-mobile .form-grid{grid-template-columns:1fr}
+body.pv-mobile .modal-card{max-height:94vh}
+body.pv-desktop .admin-shell{min-width:1050px;max-width:none;margin:0;border:0;box-shadow:none}
+body.pv-desktop .admin-sidebar{position:sticky;top:0;height:100vh;flex-direction:column;align-items:stretch;padding:24px 16px;gap:22px}
+body.pv-desktop .sidebar-label{display:block;margin:8px 10px -10px}
+body.pv-desktop .admin-user{display:flex}
+body.pv-desktop .admin-nav{flex-direction:column;flex-wrap:nowrap}
+body.pv-desktop .sidebar-bottom{margin-top:auto;flex-direction:column;flex-wrap:nowrap}
+body.pv-desktop .admin-main{padding:24px 30px 60px}
+body.pv-desktop .admin-topbar{flex-direction:row;align-items:flex-end;margin-bottom:24px}
+body.pv-desktop .admin-topbar h1{font-size:28px}
+body.pv-desktop .live-badge{font-size:12px;padding:7px 13px}
+body.pv-desktop .stat-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+body.pv-desktop .stat-card{padding:18px;border-radius:16px}
+body.pv-desktop .stat-card strong{font-size:27px}
+body.pv-desktop .admin-grid-2{grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px}
+body.pv-desktop .panel{padding:20px;border-radius:18px}
+body.pv-desktop .panel-head h2{font-size:17px}
+body.pv-desktop .chart{height:220px}
+body.pv-desktop .qr-panel{grid-template-columns:270px minmax(0,1fr);gap:32px}
+body.pv-desktop .qr-preview img{max-width:230px}
+body.pv-desktop .form-grid{grid-template-columns:1fr 1fr}

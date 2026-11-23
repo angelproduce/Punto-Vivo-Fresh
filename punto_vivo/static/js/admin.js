@@ -31,6 +31,36 @@
     el._timer = setTimeout(() => { el.hidden = true; }, 3200);
   }
 
+  // -------------------------------------------------- vista móvil / escritorio del panel
+  const modeBtn = $('admin-mode-toggle');
+  if (modeBtn) {
+    const MODE_KEY = 'pv_admin_mode';
+    const esMovil = (modo) => modo === 'mobile' || (modo === 'auto' && window.innerWidth <= 700);
+    const aplicarModo = (modo) => {
+      document.body.classList.toggle('pv-mobile', modo === 'mobile');
+      document.body.classList.toggle('pv-desktop', modo === 'desktop');
+      const movil = esMovil(modo);
+      modeBtn.textContent = movil ? '🖥️ Modo escritorio' : '📱 Modo móvil';
+      modeBtn.title = movil ? 'Cambiar a modo escritorio' : 'Cambiar a modo móvil';
+      modeBtn.setAttribute('aria-pressed', String(modo !== 'auto'));
+    };
+    let modo = 'auto';
+    try { modo = localStorage.getItem(MODE_KEY) || 'auto'; } catch (e) { /* almacenamiento bloqueado */ }
+    if (modo !== 'mobile' && modo !== 'desktop') modo = 'auto';
+    aplicarModo(modo);
+    modeBtn.addEventListener('click', () => {
+      const enMovil = document.body.classList.contains('pv-mobile') ||
+        (!document.body.classList.contains('pv-desktop') && window.innerWidth <= 700);
+      modo = enMovil ? 'desktop' : 'mobile';
+      try { localStorage.setItem(MODE_KEY, modo); } catch (e) { /* almacenamiento bloqueado */ }
+      aplicarModo(modo);
+      toast(modo === 'mobile' ? 'Modo móvil activado' : 'Modo escritorio activado');
+    });
+    window.addEventListener('resize', () => {
+      if (!document.body.classList.contains('pv-mobile') && !document.body.classList.contains('pv-desktop')) aplicarModo('auto');
+    });
+  }
+
   const titles = {resumen:'Resumen', clientes:'Clientes', visitas:'Visitas', menu:'Administrar menú', usuarios:'Usuarios', qr:'Código QR'};
   document.querySelectorAll('#admin-nav .nav-item').forEach((btn) => {
     btn.addEventListener('click', () => {
