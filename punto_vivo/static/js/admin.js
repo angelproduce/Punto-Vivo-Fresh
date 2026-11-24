@@ -86,6 +86,11 @@
       const name = btn.dataset.section;
       $('section-' + name).classList.add('is-active');
       $('section-title').textContent = titles[name] || name;
+      const nav = document.getElementById('admin-nav');
+      if (nav && nav.scrollWidth > nav.clientWidth + 2) {
+        const izq = btn.getBoundingClientRect().left - nav.getBoundingClientRect().left + nav.scrollLeft;
+        nav.scrollTo({ left: izq - (nav.clientWidth - btn.offsetWidth) / 2, behavior: 'smooth' });
+      }
       load(name);
     });
   });

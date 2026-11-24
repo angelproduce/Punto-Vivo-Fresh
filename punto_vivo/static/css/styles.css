@@ -213,12 +213,15 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
 .admin-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
 .admin-sidebar{position:sticky;top:0;height:100vh;background:var(--verde-oscuro);color:#fff;padding:24px 16px;display:flex;flex-direction:column;gap:22px}
 .sidebar-label{font-size:10px;letter-spacing:.2em;color:rgba(255,255,255,.45);font-weight:800;margin:8px 10px -10px}
-.admin-nav{display:flex;flex-direction:column;gap:5px}
-.admin-nav .nav-item{border:0;background:transparent;color:rgba(255,255,255,.72);padding:12px 14px;border-radius:11px;display:flex;gap:11px;align-items:center;font-weight:650;font-size:14px;text-align:left;transition:.18s}
+.admin-nav{display:flex;flex-direction:column;gap:5px;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent;padding-right:4px;margin-right:-4px}
+.admin-nav::-webkit-scrollbar{width:6px}
+.admin-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.28);border-radius:99px}
+.admin-nav::-webkit-scrollbar-track{background:transparent}
+.admin-nav .nav-item{border:0;background:transparent;color:rgba(255,255,255,.72);padding:12px 14px;border-radius:11px;display:flex;gap:11px;align-items:center;font-weight:650;font-size:14px;text-align:left;transition:.18s;flex:none}
 .admin-nav .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
 .admin-nav .nav-item.is-active{background:rgba(245,197,24,.16);color:var(--amarillo);box-shadow:inset 3px 0 var(--amarillo)}
 .admin-nav .nav-item span{font-size:17px}
-.sidebar-bottom{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+.sidebar-bottom{margin-top:auto;display:flex;flex-direction:column;gap:8px;flex:none}
 .admin-user{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.07);padding:11px;border-radius:12px;margin-bottom:6px;min-width:0}
 .admin-user .avatar{width:34px;height:34px;border-radius:10px;background:var(--amarillo);color:#3b2c00;display:grid;place-items:center;font-weight:850;flex:none}
 .admin-user div{min-width:0}
@@ -306,7 +309,7 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
   .admin-shell{grid-template-columns:1fr}
   .admin-sidebar{position:relative;height:auto;flex-direction:row;align-items:center;flex-wrap:wrap;gap:12px}
   .sidebar-label,.admin-user{display:none}
-  .admin-nav{flex-direction:row;flex-wrap:wrap;flex:1}
+  .admin-nav{flex-direction:row;flex-wrap:wrap;flex:1;overflow:visible;margin:0;padding:0}
   .sidebar-bottom{margin:0;flex-direction:row}
   .menu-toolbar{position:static}
 }
@@ -465,7 +468,7 @@ body.pv-desktop .admin-shell{min-width:1050px;max-width:none;margin:0;border:0;b
 body.pv-desktop .admin-sidebar{position:sticky;top:0;height:100vh;flex-direction:column;align-items:stretch;padding:24px 16px;gap:22px}
 body.pv-desktop .sidebar-label{display:block;margin:8px 10px -10px}
 body.pv-desktop .admin-user{display:flex}
-body.pv-desktop .admin-nav{flex-direction:column;flex-wrap:nowrap;overflow:visible;padding-bottom:0}
+body.pv-desktop .admin-nav{flex-direction:column;flex-wrap:nowrap;overflow-y:auto;overflow-x:hidden;padding-bottom:0}
 body.pv-desktop .sidebar-bottom{margin-top:auto;flex-direction:column;flex-wrap:nowrap}
 body.pv-desktop .admin-main{padding:24px 30px 60px}
 body.pv-desktop .admin-topbar{flex-direction:row;align-items:flex-end;margin-bottom:24px}
@@ -672,6 +675,8 @@ body.pv-mobile .detail-order input{min-height:38px}
 body.pv-mobile .detail-order .btn{min-height:42px}
 body.pv-mobile #share-product{min-height:36px;font-size:11px}
 
-/* Once secciones en la barra inferior del panel (la regla de seis se conserva). */
-body.pv-mobile .admin-nav{grid-template-columns:repeat(11,minmax(0,1fr))}
-body.pv-mobile .admin-nav .nav-item::after{font-size:8px}
+/* Once secciones: la barra inferior se desliza en horizontal en vez de apretar los iconos. */
+body.pv-mobile .admin-nav{display:flex;flex-wrap:nowrap;grid-template-columns:none;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;width:100%;gap:2px;padding:0 2px;margin:0}
+body.pv-mobile .admin-nav::-webkit-scrollbar{display:none}
+body.pv-mobile .admin-nav .nav-item{flex:0 0 56px;min-width:56px}
+body.pv-mobile .admin-nav .nav-item::after{font-size:9px}

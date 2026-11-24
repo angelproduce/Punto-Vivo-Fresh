@@ -293,6 +293,10 @@ def run() -> None:
           and "content:attr(data-short)" in _admin_css
           and 'data-short="Menú"' in _admin_tpl
           and 'id="btn-logout-movil"' in _admin_html)
+    check("50b. Menú del panel con desplazamiento vertical y horizontal",
+          ".admin-nav{display:flex;flex-direction:column;gap:5px;min-height:0;overflow-y:auto" in _admin_css
+          and "body.pv-mobile .admin-nav{display:flex;flex-wrap:nowrap;grid-template-columns:none;overflow-x:auto" in _admin_css
+          and "nav.scrollTo" in _admin_js)
     check("51. Tablas convertidas en tarjetas en móvil",
           "body.pv-mobile .data-table thead{display:none}" in _admin_css
           and "content:attr(data-label)" in _admin_css
@@ -321,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124b" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124c" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -332,7 +336,7 @@ def run() -> None:
           and "state.categoria = chip.dataset.cat" in _public_js)
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
-          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124b" in _sw.text)
+          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124c" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -780,7 +784,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261124b" in _sw.text)
+          and "pvf-static-20261124c" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js
