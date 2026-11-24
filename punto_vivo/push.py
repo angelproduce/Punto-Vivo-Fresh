@@ -9,14 +9,18 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pywebpush import WebPushException, webpush
+try:
+    from pywebpush import WebPushException, webpush
+except Exception:  # la notificación es opcional: nunca debe romper la app
+    WebPushException = None
+    webpush = None
 
 from . import config, repository
 
 
 def configurado() -> bool:
     publica, privada = config.vapid_keys()
-    return bool(publica and privada)
+    return bool(publica and privada and webpush is not None)
 
 
 def notificar_nuevo_pedido(numero: str, cliente: str, total: Any) -> int:
@@ -48,11 +52,11 @@ def notificar_nuevo_pedido(numero: str, cliente: str, total: Any) -> int:
             )
             repository.marcar_suscripcion_push(suscripcion["id"])
             enviados += 1
-        except WebPushException as exc:
-            respuesta = getattr(exc, "response", None)
-            if respuesta is not None and getattr(respuesta, "status_code", 0) in (404, 410):
-                repository.borrar_suscripcion_push(suscripcion["id"])
-        except Exception:
+        except Exception as exc:
+            if WebPushException is not None and isinstance(exc, WebPushException):
+                respuesta = getattr(exc, "response", None)
+                if respuesta is not None and getattr(respuesta, "status_code", 0) in (404, 410):
+                    repository.borrar_suscripcion_push(suscripcion["id"])
             # Un fallo de notificación jamás debe afectar al pedido confirmado.
             continue
     return enviados

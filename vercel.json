@@ -4,7 +4,7 @@
     "punto_vivo/app.py": {
       "maxDuration": 60,
       "includeFiles": "{punto_vivo/templates/**,punto_vivo/static/**}",
-      "excludeFiles": "{.venv/**,tools/**,.cache/**,output/**,queue/**,logs/**,state/**,assets/**,src/**,punto_vivo/tests/**,**/__pycache__/**,**/*.pyc,*.spec,render.yaml,requirements*.txt,.env*,*.md}"
+      "excludeFiles": "{.venv/**,tools/**,.cache/**,output/**,queue/**,logs/**,state/**,assets/**,src/**,punto_vivo/tests/**,**/__pycache__/**,**/*.pyc,*.spec,render.yaml,.env*,*.md}"
     }
   }
 }
