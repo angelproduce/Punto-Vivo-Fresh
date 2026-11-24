@@ -325,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124e" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124f" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -337,7 +337,8 @@ def run() -> None:
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
           and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124c" not in _sw.text
-          and "pvf-static-20261124d" not in _sw.text and "pvf-static-20261124e" in _sw.text)
+          and "pvf-static-20261124d" not in _sw.text and "pvf-static-20261124e" not in _sw.text
+          and "pvf-static-20261124f" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -510,6 +511,8 @@ def run() -> None:
           and "`/api/admin/pedidos/${borrarVentaId}`" in _admin_js
           and 'data-borrar-pedido=' in _admin_js
           and 'data-borrar-comprobante=' in _admin_js
+          and 'data-ver-comprobante=' in _admin_js
+          and '📎 Ver comprobante' in _admin_js
           and 'id="comprobante-borrar"' in _admin_tpl
           and "`/api/admin/pedidos/${destinoId}/comprobante`" in _admin_js
           and 'colspan="6"' in _admin_js
@@ -832,7 +835,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261124e" in _sw.text)
+          and "pvf-static-20261124f" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js

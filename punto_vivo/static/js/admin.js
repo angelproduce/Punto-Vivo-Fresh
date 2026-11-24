@@ -391,7 +391,7 @@
       $('pagos-body').innerHTML = lista.length ? lista.map((p) => `
         <tr><td><strong>${esc(p.numero)}</strong></td><td>${esc(p.cliente)}</td>
         <td>${esc(p.telefono)}</td><td><strong>${money(p.total)}</strong></td>
-        <td>${esc(p.banco || '—')}</td><td>${p.comprobante_enviado ? '📎 Sí' : '—'}</td>
+        <td>${esc(p.banco || '—')}</td><td>${p.comprobante_enviado ? `<button class="mini-btn" data-ver-comprobante="${p.id}" type="button">📎 Ver comprobante</button>` : '—'}</td>
         <td><small>${p.comprobante_enviado ? esc(String(p.comprobante_enviado).replace('T', ' ').slice(0, 16)) : '—'}</small></td>
         <td>${badge(p.pago_estado, PAGOS)}${p.pago_nota ? `<br><small>${esc(p.pago_nota)}</small>` : ''}</td>
         <td><div class="row-actions">${accionesPedido(p)}</div></td></tr>`).join('')
