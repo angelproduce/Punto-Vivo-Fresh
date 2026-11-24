@@ -677,6 +677,20 @@
     cargar();
     dialog.showModal();
   });
+  document.getElementById('cerrar-sesion').addEventListener('click', async () => {
+    if (!confirm('¿Cerrar sesión? Se borrará el carrito guardado y volverás al registro. Tus pedidos siguen en el sistema.')) return;
+    try {
+      const res = await fetch('/api/visita/salir', {method: 'POST'});
+      let datos = {};
+      try { datos = await res.json(); } catch (err) { /* respuesta vacía */ }
+      if (!res.ok || !datos.ok) throw new Error(datos.detail || 'No se pudo cerrar la sesión.');
+      try {
+        [CART_KEY, NOTES_KEY, TOKEN_KEY].forEach((clave) => localStorage.removeItem(clave));
+        ['pv_request_token', 'pv_visit_ok'].forEach((clave) => sessionStorage.removeItem(clave));
+      } catch (err) { /* almacenamiento bloqueado */ }
+      location.href = datos.redirect || '/bienvenida';
+    } catch (err) { toast(err.message, true); }
+  });
   ['close-mis-pedidos', 'close-mis-pedidos-2'].forEach((id) =>
     document.getElementById(id).addEventListener('click', () => dialog.close()));
   dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });

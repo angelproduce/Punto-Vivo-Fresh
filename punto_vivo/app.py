@@ -415,6 +415,19 @@ def api_visita_actual(request: Request) -> dict[str, Any]:
     return {"visit_number": payload.get("n"), "visit_id": payload.get("v")}
 
 
+@app.post("/api/visita/salir")
+def api_visita_salir(request: Request) -> JSONResponse:
+    """Cierra la sesión del cliente borrando su cookie firmada de visitante."""
+    if not origin_ok(request):
+        raise HTTPException(status_code=403, detail="Origen no permitido.")
+    respuesta = JSONResponse({"ok": True, "redirect": WELCOME_PATH})
+    respuesta.delete_cookie(
+        VISITOR_COOKIE, path="/", secure=request.url.scheme == "https",
+        httponly=True, samesite="lax",
+    )
+    return respuesta
+
+
 @app.get(MENU_PATH, response_class=HTMLResponse)
 def menu(request: Request) -> Response:
     if not require_visitor(request):

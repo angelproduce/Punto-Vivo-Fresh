@@ -325,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124d" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124e" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -337,7 +337,7 @@ def run() -> None:
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
           and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124c" not in _sw.text
-          and "pvf-static-20261124d" in _sw.text)
+          and "pvf-static-20261124d" not in _sw.text and "pvf-static-20261124e" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -827,7 +827,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261124d" in _sw.text)
+          and "pvf-static-20261124e" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js
@@ -848,6 +848,34 @@ def run() -> None:
           and db.one("SELECT COUNT(*) FROM visits WHERE customer_id=?", (cid_borrar,))[0] == 0
           and db.one("SELECT COUNT(*) FROM customers")[0] == otros_clientes - 1,
           f"status={borrar_cliente.status_code} body={borrar_cliente.text}")
+
+    # Cerrar sesión del cliente: se ejecuta al final para no afectar al resto
+    check("72. Botón de cerrar sesión y limpieza del carrito",
+          'id="cerrar-sesion"' in _menu_tpl
+          and "'/api/visita/salir'" in _public_js
+          and "localStorage.removeItem(clave)" in _public_js
+          and "sessionStorage.removeItem(clave)" in _public_js)
+    reset_ventana()
+    cliente_salida = TestClient(app)
+    registro_salida = cliente_salida.post("/api/visita", json={
+        "full_name": "Cliente Salida", "phone": "8291113333", "consent": True,
+        "request_token": "token-cerrar-sesion-1234", "website": "",
+    })
+    dentro = cliente_salida.get("/menu")
+    salida = cliente_salida.post("/api/visita/salir")
+    fuera = cliente_salida.get("/menu", follow_redirects=False)
+    check("73. El cliente cierra sesión y vuelve al registro",
+          registro_salida.status_code == 200 and dentro.status_code == 200
+          and salida.status_code == 200 and salida.json()["ok"] is True
+          and salida.json()["redirect"] == "/bienvenida"
+          and "pv_visita=" in salida.headers.get("set-cookie", "")
+          and "Max-Age=0" in salida.headers.get("set-cookie", "")
+          and fuera.status_code == 302 and "/bienvenida" in fuera.headers["location"],
+          f"status={salida.status_code} body={salida.text}")
+    externo = cliente_salida.post("/api/visita/salir",
+                                  headers={"Origin": "https://sitio-malicioso.invalid"})
+    check("74. Un origen externo no puede cerrar la sesión del cliente",
+          externo.status_code == 403, externo.text)
 
     # Regresión Vercel: el arranque no debe crear carpetas en disco de solo lectura
     from punto_vivo import config as pv_config
