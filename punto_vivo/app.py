@@ -91,6 +91,26 @@ def require_visitor(request: Request) -> bool:
     return security.verify_visitor(request.cookies.get(VISITOR_COOKIE)) is not None
 
 
+def visit_payload(request: Request) -> dict[str, Any]:
+    payload = security.verify_visitor(request.cookies.get(VISITOR_COOKIE))
+    if payload is None:
+        raise HTTPException(status_code=401, detail='Registra tu visita para continuar.')
+    return payload
+
+
+def visitor_customer(request: Request) -> tuple[int, int]:
+    """Devuelve (visit_id, customer_id) resueltos en servidor desde la cookie firmada."""
+    payload = visit_payload(request)
+    try:
+        visit_id = int(payload['v'])
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=401, detail='Sesión de visita no válida.')
+    customer_id = repository.customer_for_visit(visit_id)
+    if customer_id is None:
+        raise HTTPException(status_code=401, detail='Registra tu visita para continuar.')
+    return visit_id, customer_id
+
+
 def public_context(request: Request, **extra: Any) -> dict[str, Any]:
     ctx: dict[str, Any] = {"request": request, "brand": "PUNTO VIVO FRESH"}
     ctx.update(extra)
@@ -184,6 +204,40 @@ class ProductIn(BaseModel):
     available: bool = True
     sort_order: int = 0
     is_demo: bool = False
+
+
+class OrderItemIn(BaseModel):
+    product_id: int
+    quantity: int
+    notes: str = ""
+
+
+class OrderAddressIn(BaseModel):
+    address_line1: str
+    address_line2: str = ""
+    city: str = ""
+    province: str = ""
+    notes: str = ""
+
+
+class OrderIn(BaseModel):
+    items: list[OrderItemIn]
+    request_token: str
+    delivery_method: str = "retiro"
+    address: OrderAddressIn | None = None
+    notes: str = ""
+    payment_method: str = "efectivo"
+
+
+class OrderActionIn(BaseModel):
+    accion: str
+    referencia: str = ""
+
+
+class OrderPaymentIn(BaseModel):
+    pagado: bool
+    confirmado: bool = False
+    referencia: str = ""
 
 
 # ------------------------------------------------------------------ páginas públicas
@@ -358,6 +412,60 @@ def api_producto(producto_id: int, request: Request) -> dict[str, Any]:
     return item
 
 
+# ------------------------------------------------------------------ pedidos públicos
+
+@app.get('/api/cliente/actual')
+def api_cliente_actual(request: Request) -> dict[str, Any]:
+    """Nombre y teléfono del visitante, resueltos desde su cookie firmada."""
+    visit_id, customer_id = visitor_customer(request)
+    cliente = repository.get_customer(customer_id)
+    if cliente is None:
+        raise HTTPException(status_code=401, detail='Cliente no encontrado.')
+    return {
+        'nombre': cliente['full_name'], 'telefono': cliente['phone'],
+        'visit_id': visit_id, 'cliente_id': customer_id,
+    }
+
+
+@app.post('/api/pedido')
+def api_crear_pedido(payload: OrderIn, request: Request) -> dict[str, Any]:
+    if not origin_ok(request):
+        raise HTTPException(status_code=403, detail='Origen no permitido.')
+    if len(payload.request_token.strip()) < 8:
+        raise HTTPException(status_code=400, detail='Token de pedido no válido.')
+    visit_id, _ = visitor_customer(request)
+    direccion = payload.address.model_dump() if payload.address else None
+    try:
+        pedido = repository.create_order(
+            visit_id,
+            [item.model_dump() for item in payload.items],
+            payload.request_token.strip(),
+            payload.delivery_method,
+            direccion,
+            payload.notes,
+            payload.payment_method,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {
+        'ok': True,
+        'numero': pedido['order_number'],
+        'total': pedido['total'],
+        'duplicate': pedido['duplicate'],
+        'mensaje': ('Este pedido ya estaba registrado.' if pedido['duplicate']
+                    else 'Pedido confirmado. Te esperamos.'),
+    }
+
+
+@app.get('/api/pedidos/mios')
+def api_pedidos_mios(request: Request) -> dict[str, Any]:
+    """El cliente solo ve los pedidos ligados a su visita; nunca por ID ajeno."""
+    _, customer_id = visitor_customer(request)
+    return {'pedidos': repository.customer_orders(customer_id)}
+
+
 # ------------------------------------------------------------------ autenticación admin
 
 @app.get("/admin/login", response_class=HTMLResponse)
@@ -493,6 +601,7 @@ def api_resumen(session=Depends(require_admin)) -> dict[str, Any]:
     for offset in range(6, -1, -1):
         fecha = (hoy - timedelta(days=offset)).strftime("%Y-%m-%d")
         dias.append({"fecha": fecha, "visitas": int(serie.get(fecha, 0))})
+    ventas = repository.sales_summary()
 
     return {
         "total_clientes": repository.count_customers(),
@@ -514,7 +623,126 @@ def api_resumen(session=Depends(require_admin)) -> dict[str, Any]:
         "serie_diaria": dias,
         "productos_activos": repository.count_products_available(),
         "demo_productos": repository.count_demo_products(),
+        "pedidos_totales": ventas["total_pedidos"],
+        "pedidos_pendientes": ventas["pendientes_pago"],
+        "ventas_hoy": ventas["ventas_hoy"],
+        "ventas_semana": ventas["ventas_semana"],
+        "ventas_mes": ventas["ventas_mes"],
+        "total_ventas": ventas["total_ventas"],
+        "monto_pendiente": ventas["monto_pendiente"],
     }
+
+
+# ------------------------------------------------------------------ pedidos admin
+
+def filtro_pedidos(q: str, estado: str, pago: str, desde: str, hasta: str) -> dict[str, str]:
+    return {"q": q, "estado": estado, "pago": pago, "desde": desde, "hasta": hasta}
+
+
+@app.get("/api/admin/pedidos/nuevos")
+def api_pedidos_nuevos(session=Depends(require_admin)) -> dict[str, Any]:
+    pedidos = repository.list_orders({"estado": "pendiente"}, 30)
+    return {"total": len(pedidos), "pedidos": pedidos}
+
+
+@app.get("/api/admin/pedidos")
+def api_pedidos(q: str = "", estado: str = "", pago: str = "", desde: str = "", hasta: str = "",
+                limite: int = 200, session=Depends(require_admin)) -> dict[str, Any]:
+    filters = filtro_pedidos(q, estado, pago, desde, hasta)
+    pedidos = repository.list_orders(filters, min(max(limite, 1), 1000))
+    return {"total": repository.count_orders(filters), "pedidos": pedidos}
+
+
+@app.get("/api/admin/pedidos/{pedido_id}")
+def api_pedido_detalle(pedido_id: int, session=Depends(require_admin)) -> dict[str, Any]:
+    pedido = repository.get_order(pedido_id)
+    if pedido is None:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    return pedido
+
+
+@app.patch("/api/admin/pedidos/{pedido_id}/estado")
+def api_pedido_estado(pedido_id: int, payload: OrderActionIn,
+                      session=Depends(require_admin)) -> dict[str, Any]:
+    try:
+        pedido = repository.update_order_status(pedido_id, payload.accion, payload.referencia)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if pedido is None:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    return pedido
+
+
+@app.patch("/api/admin/pedidos/{pedido_id}/pago")
+def api_pedido_pago(pedido_id: int, payload: OrderPaymentIn,
+                    session=Depends(require_admin)) -> dict[str, Any]:
+    """Confirmación explícita del admin; el navegador del cliente nunca llama aquí."""
+    if not payload.confirmado:
+        raise HTTPException(status_code=400, detail="Confirma la acción para continuar.")
+    try:
+        pedido = repository.set_order_paid(pedido_id, payload.pagado, payload.referencia)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if pedido is None:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    return pedido
+
+
+@app.get("/api/admin/ventas")
+def api_ventas(session=Depends(require_admin)) -> dict[str, Any]:
+    return repository.sales_summary()
+
+
+@app.get("/api/admin/exportar/pedidos.csv")
+def exportar_pedidos(q: str = "", estado: str = "", pago: str = "", desde: str = "", hasta: str = "",
+                     session=Depends(require_admin)) -> Response:
+    pedidos = repository.list_orders(filtro_pedidos(q, estado, pago, desde, hasta))
+    filas = []
+    for pedido in pedidos:
+        detalle = repository.get_order(pedido["id"]) or pedido
+        productos = "; ".join(
+            f"{i['nombre']} x{i['cantidad']}" for i in detalle.get("items", [])
+        )
+        filas.append([
+            pedido["numero"], pedido["cliente"], pedido["telefono"], pedido["entrega"],
+            pedido["creado"], pedido["estado"], pedido["pago_estado"], pedido["metodo_pago"],
+            pedido["subtotal"], pedido["descuento"], pedido["envio"], pedido["total"],
+            productos, pedido["notas"],
+        ])
+    return csv_response(
+        "punto_vivo_pedidos.csv",
+        ["N.º pedido", "Cliente", "Teléfono", "Entrega", "Fecha", "Estado", "Pago",
+         "Método de pago", "Subtotal", "Descuento", "Envío", "Total", "Productos", "Observaciones"],
+        filas,
+    )
+
+
+@app.get("/api/admin/exportar/ventas.csv")
+def exportar_ventas(session=Depends(require_admin)) -> Response:
+    filas = []
+    for pedido in repository.paid_orders():
+        filas.append([
+            pedido["numero"], pedido["cliente"], pedido["telefono"], pedido["creado"],
+            pedido["estado"], pedido["total"], pedido["metodo_pago"],
+        ])
+    return csv_response(
+        "punto_vivo_ventas.csv",
+        ["N.º pedido", "Cliente", "Teléfono", "Fecha", "Estado", "Total", "Método de pago"],
+        filas,
+    )
+
+
+@app.get("/api/admin/clientes/frecuentes")
+def api_clientes_frecuentes(session=Depends(require_admin)) -> dict[str, Any]:
+    return {"clientes": repository.frequent_customers(10)}
+
+
+@app.get("/api/admin/clientes/{cliente_id}/perfil")
+def api_cliente_perfil(cliente_id: int, session=Depends(require_admin)) -> dict[str, Any]:
+    perfil = repository.customer_profile(cliente_id)
+    if perfil is None:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado.")
+    return perfil
 
 
 @app.get("/api/admin/clientes")
@@ -608,7 +836,10 @@ def api_eliminar_historial(cliente_id: int, session=Depends(require_admin)) -> d
 @app.delete("/api/admin/clientes/{cliente_id}")
 def api_eliminar_cliente(cliente_id: int, session=Depends(require_admin)) -> dict[str, int]:
     """Elimina el cliente y todas sus visitas en una sola operación."""
-    visitas = repository.delete_customer(cliente_id)
+    try:
+        visitas = repository.delete_customer(cliente_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if visitas is None:
         raise HTTPException(status_code=404, detail="Cliente no encontrado.")
     return {"eliminado": 1, "visitas": visitas}
@@ -754,7 +985,10 @@ def editar_producto(producto_id: int, payload: ProductIn,
 def eliminar_producto(producto_id: int, session=Depends(require_admin)) -> dict[str, Any]:
     if repository.get_product(producto_id) is None:
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
-    repository.delete_product(producto_id)
+    try:
+        repository.delete_product(producto_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"ok": True}
 
 

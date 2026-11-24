@@ -13,6 +13,9 @@
     <p class="sidebar-label">ADMINISTRACIÓN</p>
     <nav class="admin-nav" id="admin-nav">
       <button class="nav-item is-active" data-section="resumen" data-short="Resumen"><span class="nav-icon">📊</span><span class="nav-label">Resumen</span></button>
+      <button class="nav-item" data-section="pedidos" data-short="Pedidos" id="nav-pedidos"><span class="nav-icon">🧾</span><span class="nav-label">Pedidos</span><span class="nav-badge" id="pedidos-badge" hidden>0</span></button>
+      <button class="nav-item" data-section="ventas" data-short="Ventas"><span class="nav-icon">💰</span><span class="nav-label">Ventas</span></button>
+      <button class="nav-item" data-section="frecuentes" data-short="Frec."><span class="nav-icon">⭐</span><span class="nav-label">Clientes frecuentes</span></button>
       <button class="nav-item" data-section="clientes" data-short="Clientes"><span class="nav-icon">👥</span><span class="nav-label">Clientes</span></button>
       <button class="nav-item" data-section="visitas" data-short="Visitas"><span class="nav-icon">🎟️</span><span class="nav-label">Visitas</span></button>
       <button class="nav-item" data-section="menu" data-short="Menú"><span class="nav-icon">🍔</span><span class="nav-label">Administrar menú</span></button>
@@ -48,6 +51,10 @@
         <div class="stat-card"><span class="stat-icon">📅</span><div><small>Visitas del día</small><strong id="stat-hoy">—</strong></div></div>
         <div class="stat-card"><span class="stat-icon">🗓️</span><div><small>Visitas de la semana</small><strong id="stat-semana">—</strong></div></div>
         <div class="stat-card"><span class="stat-icon">📆</span><div><small>Visitas del mes</small><strong id="stat-mes">—</strong></div></div>
+        <div class="stat-card stat-sales"><span class="stat-icon">🧾</span><div><small>Pedidos nuevos</small><strong id="stat-pedidos-nuevos">—</strong></div></div>
+        <div class="stat-card stat-sales"><span class="stat-icon">💵</span><div><small>Ventas de hoy</small><strong id="stat-ventas-hoy">—</strong></div></div>
+        <div class="stat-card stat-sales"><span class="stat-icon">📈</span><div><small>Ventas del mes</small><strong id="stat-ventas-mes">—</strong></div></div>
+        <div class="stat-card stat-sales"><span class="stat-icon">⏳</span><div><small>Pendiente de pago</small><strong id="stat-pendiente-pago">—</strong></div></div>
       </div>
 
       <div class="admin-grid-2">
@@ -61,6 +68,90 @@
         </div>
       </div>
       <div class="notice notice-info" id="demo-info"></div>
+    </section>
+
+    <!-- ---------------------------------------------------- PEDIDOS -->
+    <section class="admin-section" id="section-pedidos">
+      <div class="stat-grid stat-orders">
+        <div class="stat-card"><span class="stat-icon">🆕</span><div><small>Pedidos nuevos</small><strong id="ped-stat-nuevos">—</strong></div></div>
+        <div class="stat-card"><span class="stat-icon">⏳</span><div><small>Pendientes de pago</small><strong id="ped-stat-pendientes">—</strong></div></div>
+        <div class="stat-card"><span class="stat-icon">👨‍🍳</span><div><small>En preparación</small><strong id="ped-stat-preparando">—</strong></div></div>
+        <div class="stat-card"><span class="stat-icon">✅</span><div><small>Entregados</small><strong id="ped-stat-entregados">—</strong></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div><h2>Gestión de pedidos</h2><p id="pedidos-total">—</p></div>
+          <div class="toolbar">
+            <input type="search" id="pedido-q" placeholder="Nombre o N.º de pedido">
+            <select id="pedido-estado" aria-label="Filtrar por estado">
+              <option value="">Todos los estados</option>
+              <option value="pendiente">Pendiente</option><option value="aceptada">Aceptada</option>
+              <option value="preparando">Preparando</option><option value="lista">Lista</option>
+              <option value="entregada">Entregada</option><option value="rechazada">Rechazada</option>
+              <option value="cancelada">Cancelada</option>
+            </select>
+            <select id="pedido-pago" aria-label="Filtrar por pago">
+              <option value="">Todos los pagos</option><option value="pendiente">Pendiente</option>
+              <option value="aprobado">Aprobado</option><option value="rechazado">Rechazado</option>
+              <option value="reembolsado">Reembolsado</option>
+            </select>
+            <input type="date" id="pedido-desde" aria-label="Desde">
+            <input type="date" id="pedido-hasta" aria-label="Hasta">
+            <button class="btn btn-primary btn-sm" id="btn-buscar-pedidos" type="button">Buscar</button>
+            <button class="btn btn-outline btn-sm" id="btn-refrescar-pedidos" type="button">Actualizar</button>
+          </div>
+        </div>
+        <div class="export-bar"><a class="btn btn-outline btn-sm" id="export-pedidos" href="#">⬇ Exportar pedidos (CSV)</a></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr>
+          <th>N.º pedido</th><th>Cliente</th><th>Teléfono</th><th>Entrega</th><th>Total</th>
+          <th>Estado</th><th>Pago</th><th>Fecha</th><th></th>
+        </tr></thead><tbody id="pedidos-body"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------- VENTAS -->
+    <section class="admin-section" id="section-ventas">
+      <div class="stat-grid">
+        <div class="stat-card"><span class="stat-icon">💵</span><div><small>Ventas del día</small><strong id="v-hoy">—</strong></div></div>
+        <div class="stat-card"><span class="stat-icon">🗓️</span><div><small>Ventas de la semana</small><strong id="v-semana">—</strong></div></div>
+        <div class="stat-card"><span class="stat-icon">📆</span><div><small>Ventas del mes</small><strong id="v-mes">—</strong></div></div>
+        <div class="stat-card"><span class="stat-icon">💰</span><div><small>Total de ventas</small><strong id="v-total">—</strong></div></div>
+        <div class="stat-card"><span class="stat-icon">📊</span><div><small>Promedio de compra</small><strong id="v-promedio">—</strong></div></div>
+        <div class="stat-card"><span class="stat-icon">🧾</span><div><small>Total de pedidos</small><strong id="v-pedidos">—</strong></div></div>
+      </div>
+      <div class="admin-grid-2">
+        <div class="panel">
+          <div class="panel-head"><div><h2>Ingresos de los últimos 7 días</h2><p>Solo pedidos marcados como pagados</p></div></div>
+          <div class="chart" id="chart-ventas"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h2>Pedidos por situación de pago</h2><p>Pendientes, pagados y entregados</p></div></div>
+          <div class="cobros-estado" id="cobros-estado"></div>
+        </div>
+      </div>
+      <div class="admin-grid-2">
+        <div class="panel">
+          <div class="panel-head"><div><h2>Productos más vendidos</h2><p>Unidades vendidas en pedidos pagados</p></div></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Producto</th><th>Unidades</th><th>Ingresos</th></tr></thead><tbody id="ventas-productos"></tbody></table></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h2>Ingresos por categoría</h2><p>Distribución de las ventas definitivas</p></div></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Categoría</th><th>Ingresos</th></tr></thead><tbody id="ventas-categorias"></tbody></table></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div><h2>Historial de ventas</h2><p>Pedidos pagados, sin rechazados ni cancelados</p></div>
+          <a class="btn btn-outline btn-sm" href="/api/admin/exportar/ventas.csv" download>⬇ Exportar ventas (CSV)</a>
+        </div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>N.º pedido</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Total</th></tr></thead><tbody id="ventas-historial"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------- FRECUENTES -->
+    <section class="admin-section" id="section-frecuentes">
+      <div class="panel">
+        <div class="panel-head"><div><h2>Clientes frecuentes</h2><p>Quienes más compran, ordenados por total gastado</p></div></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Cliente</th><th>Teléfono</th><th>Pedidos</th><th>Total</th><th>Promedio</th><th>Última compra</th><th></th></tr></thead><tbody id="frecuentes-body"></tbody></table></div>
+      </div>
     </section>
 
     <!-- ---------------------------------------------------- CLIENTES -->
@@ -189,6 +280,21 @@
         <div class="modal-foot"><button type="button" class="btn btn-outline" data-close="user-backdrop">Cancelar</button><button type="submit" class="btn btn-primary" id="user-submit">Crear usuario</button></div>
       </form>
     </div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="profile-backdrop">
+  <div class="modal-card modal-wide">
+    <div class="modal-head"><h2 id="profile-title">Perfil del cliente</h2><button class="icon-btn" data-close="profile-backdrop">✕</button></div>
+    <div class="modal-body" id="profile-body"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="order-backdrop">
+  <div class="modal-card modal-wide">
+    <div class="modal-head"><h2 id="order-title">Detalle del pedido</h2><button class="icon-btn" data-close="order-backdrop">✕</button></div>
+    <div class="modal-body" id="order-body"></div>
+    <div class="modal-foot" id="order-foot"></div>
   </div>
 </div>
 

@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const money = (v) => 'RD$ ' + Number(v || 0).toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const csrf = document.querySelector('meta[name="pv-csrf"]')?.content || sessionStorage.getItem('pv_csrf') || '';
   const $ = (id) => document.getElementById(id);
 
@@ -76,7 +77,7 @@
     });
   }
 
-  const titles = {resumen:'Resumen', clientes:'Clientes', visitas:'Visitas', menu:'Administrar menú', usuarios:'Usuarios', qr:'Código QR'};
+  const titles = {resumen:'Resumen', pedidos:'Pedidos', ventas:'Ventas', frecuentes:'Clientes frecuentes', clientes:'Clientes', visitas:'Visitas', menu:'Administrar menú', usuarios:'Usuarios', qr:'Código QR'};
   document.querySelectorAll('#admin-nav .nav-item').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#admin-nav .nav-item').forEach((b) => b.classList.toggle('is-active', b === btn));
@@ -90,6 +91,9 @@
 
   function load(name) {
     if (name === 'resumen') loadResumen();
+    if (name === 'pedidos') loadPedidos();
+    if (name === 'ventas') loadVentas();
+    if (name === 'frecuentes') loadFrecuentes();
     if (name === 'clientes') loadClientes();
     if (name === 'visitas') loadVisitas();
     if (name === 'menu') { loadCategorias(); loadProductos(); }
@@ -105,6 +109,10 @@
       $('stat-hoy').textContent = d.visitas_hoy;
       $('stat-semana').textContent = d.visitas_semana;
       $('stat-mes').textContent = d.visitas_mes;
+      $('stat-pedidos-nuevos').textContent = d.pedidos_pendientes;
+      $('stat-ventas-hoy').textContent = money(d.ventas_hoy);
+      $('stat-ventas-mes').textContent = money(d.ventas_mes);
+      $('stat-pendiente-pago').textContent = money(d.monto_pendiente);
       const max = Math.max(1, ...d.serie_diaria.map((x) => x.visitas));
       $('chart-7d').innerHTML = d.serie_diaria.map((x) => {
         const label = x.fecha.slice(5).split('-').reverse().join('/');
@@ -118,14 +126,240 @@
     } catch (e) { toast(e.message, true); }
   }
 
+  // -------------------------------------------------- pedidos y notificaciones
+  const ESTADOS = {
+    pendiente:'Pendiente', aceptada:'Aceptada', preparando:'Preparando', lista:'Lista',
+    entregada:'Entregada', rechazada:'Rechazada', cancelada:'Cancelada',
+  };
+  const PAGOS = {pendiente:'Pendiente', aprobado:'Aprobado', rechazado:'Rechazado', reembolsado:'Reembolsado'};
+  const badge = (valor, mapa) => `<span class="badge badge-${esc(valor)}">${esc(mapa[valor] || valor)}</span>`;
+
+  function pedidoQuery() {
+    return new URLSearchParams({
+      q: $('pedido-q').value, estado: $('pedido-estado').value, pago: $('pedido-pago').value,
+      desde: $('pedido-desde').value, hasta: $('pedido-hasta').value,
+    });
+  }
+
+  function accionesPedido(p) {
+    let html = `<button class="mini-btn" data-ver-pedido="${p.id}">Ver detalle</button>`;
+    if (p.estado === 'pendiente') {
+      html += `<button class="mini-btn" data-id="${p.id}" data-accion="aceptar">Aceptar</button>`;
+      html += `<button class="mini-btn danger" data-id="${p.id}" data-accion="rechazar">Rechazar</button>`;
+    } else if (p.estado === 'aceptada') {
+      html += `<button class="mini-btn" data-id="${p.id}" data-accion="preparando">Preparando</button>`;
+    } else if (p.estado === 'preparando') {
+      html += `<button class="mini-btn" data-id="${p.id}" data-accion="lista">Listo</button>`;
+    } else if (p.estado === 'lista') {
+      html += `<button class="mini-btn" data-id="${p.id}" data-accion="entregada">Entregado</button>`;
+    }
+    if (p.pago_estado === 'pendiente') {
+      html += `<button class="mini-btn pay" data-pagar="${p.id}">Marcar pagado</button>`;
+    } else if (p.pago_estado === 'aprobado') {
+      html += `<button class="mini-btn" data-despagar="${p.id}">Quitar pago</button>`;
+    }
+    if (!['entregada', 'rechazada', 'cancelada'].includes(p.estado)) {
+      html += `<button class="mini-btn danger" data-id="${p.id}" data-accion="cancelar">Cancelar</button>`;
+    }
+    return html;
+  }
+
+  async function loadPedidos() {
+    try {
+      const params = pedidoQuery();
+      const d = await api('/api/admin/pedidos?' + params);
+      $('pedidos-total').textContent = `${d.total} pedido(s) en el filtro`;
+      $('export-pedidos').href = '/api/admin/exportar/pedidos.csv?' + params;
+      const lista = d.pedidos;
+      $('ped-stat-nuevos').textContent = lista.filter((p) => p.estado === 'pendiente').length;
+      $('ped-stat-pendientes').textContent = lista.filter((p) => p.pago_estado === 'pendiente').length;
+      $('ped-stat-preparando').textContent = lista.filter((p) => ['preparando', 'lista'].includes(p.estado)).length;
+      $('ped-stat-entregados').textContent = lista.filter((p) => p.estado === 'entregada').length;
+      $('pedidos-body').innerHTML = lista.length ? lista.map((p) => `
+        <tr><td><strong>${esc(p.numero)}</strong></td><td>${esc(p.cliente)}</td>
+        <td>${esc(p.telefono)}</td><td>${p.entrega === 'delivery' ? 'Domicilio' : 'Retiro'}</td>
+        <td><strong>${money(p.total)}</strong></td><td>${badge(p.estado, ESTADOS)}</td>
+        <td>${badge(p.pago_estado, PAGOS)}</td><td><small>${esc(String(p.creado).replace('T', ' ').slice(0, 16))}</small></td>
+        <td><div class="row-actions">${accionesPedido(p)}</div></td></tr>`).join('')
+        : '<tr><td colspan="9" class="muted">No hay pedidos para ese filtro.</td></tr>';
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function showPedido(id) {
+    try {
+      const p = await api('/api/admin/pedidos/' + id);
+      $('order-title').textContent = 'Pedido ' + p.numero;
+      let html = `<div class="order-meta">
+        <div><small>Cliente</small><strong>${esc(p.cliente)}</strong></div>
+        <div><small>Teléfono</small><strong>${esc(p.telefono)}</strong></div>
+        <div><small>Estado</small>${badge(p.estado, ESTADOS)}</div>
+        <div><small>Pago</small>${badge(p.pago ? p.pago.estado : 'pendiente', PAGOS)}</div>
+        <div><small>Entrega</small><strong>${p.entrega === 'delivery' ? 'A domicilio' : 'Recoger en el negocio'}</strong></div>
+        <div><small>Fecha</small><strong>${esc(String(p.creado).replace('T', ' ').slice(0, 19))}</strong></div>
+      </div>`;
+      if (p.direccion) {
+        html += `<div class="notice notice-info"><span>📍</span><div><strong>Dirección de entrega</strong><br>${esc(p.direccion.linea1)} ${esc(p.direccion.linea2)}<br>${esc(p.direccion.ciudad)} ${esc(p.direccion.provincia)} ${esc(p.direccion.notas)}</div></div>`;
+      }
+      if (p.notas) html += `<div class="notice notice-warn"><span>📝</span><div><strong>Observaciones</strong><br>${esc(p.notas)}</div></div>`;
+      html += `<h4>Productos del pedido</h4><div class="table-wrap"><table class="data-table"><thead><tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Observación</th><th>Subtotal</th></tr></thead><tbody>`;
+      html += (p.items || []).map((i) => `<tr><td>${esc(i.nombre)}</td><td>${money(i.precio)}</td><td>${i.cantidad}</td><td>${esc(i.notas || '—')}</td><td><strong>${money(i.subtotal)}</strong></td></tr>`).join('');
+      html += `</tbody></table></div><div class="order-totals"><div><span>Subtotal</span><strong>${money(p.subtotal)}</strong></div><div><span>Descuento</span><strong>${money(p.descuento)}</strong></div><div><span>Envío</span><strong>${money(p.envio)}</strong></div><div class="grand"><span>Total</span><strong>${money(p.total)}</strong></div></div>`;
+      if (p.pago) html += `<p class="small-note">Método de pago elegido: ${esc(p.pago.metodo)}. Confirmado por el administrador ${p.pago.pagado_en ? esc(String(p.pago.pagado_en).slice(0, 16)) : '—'}.</p>`;
+      $('order-body').innerHTML = html;
+      $('order-foot').innerHTML = `<div class="row-actions">${accionesPedido(p)}</div>`;
+      $('order-backdrop').classList.remove('hidden');
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function accionPedido(id, accion) {
+    const nombres = {aceptar:'aceptar', rechazar:'rechazar', preparando:'marcar como preparando',
+      lista:'marcar como listo', entregada:'marcar como entregado', cancelar:'cancelar'};
+    if (['rechazar', 'cancelar'].includes(accion) &&
+        !confirm(`¿Seguro que deseas ${nombres[accion] || accion} este pedido?`)) return;
+    try {
+      await api(`/api/admin/pedidos/${id}/estado`, {method: 'PATCH', body: {accion}});
+      toast('Estado del pedido actualizado');
+      $('order-backdrop').classList.add('hidden');
+      loadPedidos(); loadResumen(); loadVentas(); checkPedidosNuevos();
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function marcarPago(id, pagado) {
+    const aviso = pagado
+      ? 'Confirma que recibiste el pago de este pedido. La venta se contabilizará como definitiva.'
+      : '¿Dejar este pago como pendiente? La venta dejará de contabilizarse.';
+    if (!confirm(aviso)) return;
+    try {
+      await api(`/api/admin/pedidos/${id}/pago`, {method: 'PATCH', body: {pagado, confirmado: true}});
+      toast(pagado ? 'Pago confirmado' : 'Pago marcado como pendiente');
+      $('order-backdrop').classList.add('hidden');
+      loadPedidos(); loadResumen(); loadVentas(); loadFrecuentes(); checkPedidosNuevos();
+    } catch (e) { toast(e.message, true); }
+  }
+
+  document.addEventListener('click', (event) => {
+    const ver = event.target.closest('[data-ver-pedido]');
+    if (ver) { showPedido(Number(ver.dataset.verPedido)); return; }
+    const accion = event.target.closest('[data-accion]');
+    if (accion) { accionPedido(Number(accion.dataset.id), accion.dataset.accion); return; }
+    const pagar = event.target.closest('[data-pagar]');
+    if (pagar) { marcarPago(Number(pagar.dataset.pagar), true); return; }
+    const despagar = event.target.closest('[data-despagar]');
+    if (despagar) marcarPago(Number(despagar.dataset.despagar), false);
+  });
+
+  $('btn-buscar-pedidos').addEventListener('click', loadPedidos);
+  $('btn-refrescar-pedidos').addEventListener('click', () => {
+    ['pedido-q', 'pedido-desde', 'pedido-hasta'].forEach((id) => { $(id).value = ''; });
+    $('pedido-estado').value = '';
+    $('pedido-pago').value = '';
+    loadPedidos();
+  });
+  ['pedido-q', 'pedido-desde', 'pedido-hasta'].forEach((id) =>
+    $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') loadPedidos(); }));
+
+  async function checkPedidosNuevos() {
+    try {
+      const d = await api('/api/admin/pedidos/nuevos');
+      const badgeEl = $('pedidos-badge');
+      badgeEl.textContent = String(d.total);
+      badgeEl.hidden = d.total === 0;
+      const actual = d.pedidos.map((p) => String(p.id)).sort().join(',');
+      let anterior = null;
+      try { anterior = sessionStorage.getItem('pv_pedidos_vistos'); } catch (e) { /* ignorar */ }
+      if (anterior !== null && anterior !== actual) {
+        const vistos = new Set(anterior.split(',').filter(Boolean));
+        const nuevos = d.pedidos.filter((p) => !vistos.has(String(p.id)));
+        if (nuevos.length) toast(`🔔 ${nuevos.length} pedido(s) nuevo(s) · ${nuevos[0].numero}`);
+      }
+      try { sessionStorage.setItem('pv_pedidos_vistos', actual); } catch (e) { /* ignorar */ }
+    } catch (e) { /* la notificación nunca interrumpe al administrador */ }
+  }
+
+  // -------------------------------------------------- ventas y clientes frecuentes
+  async function loadVentas() {
+    try {
+      const d = await api('/api/admin/ventas');
+      $('v-hoy').textContent = money(d.ventas_hoy);
+      $('v-semana').textContent = money(d.ventas_semana);
+      $('v-mes').textContent = money(d.ventas_mes);
+      $('v-total').textContent = money(d.total_ventas);
+      $('v-promedio').textContent = money(d.promedio_compra);
+      $('v-pedidos').textContent = d.total_pedidos;
+      const max = Math.max(1, ...d.serie_ventas.map((x) => x.total));
+      $('chart-ventas').innerHTML = d.serie_ventas.map((x) => {
+        const label = x.fecha.slice(5).split('-').reverse().join('/');
+        const h = Math.max(3, Math.round((x.total / max) * 160));
+        return `<div class="chart-col"><div class="chart-bar" style="height:${h}px"><span>${x.total}</span></div><small>${label}</small></div>`;
+      }).join('');
+      $('cobros-estado').innerHTML = `
+        <div class="cobro-row"><span>⏳ Pendientes de pago</span><strong>${d.pendientes_pago} · ${money(d.monto_pendiente)}</strong></div>
+        <div class="cobro-row"><span>✅ Pagados (ventas definitivas)</span><strong>${d.pagadas} · ${money(d.monto_pagado)}</strong></div>
+        <div class="cobro-row"><span>🚚 Pagados y entregados</span><strong>${d.entregadas} · ${money(d.monto_entregado)}</strong></div>`;
+      $('ventas-productos').innerHTML = d.productos_top.length ? d.productos_top.map((p) =>
+        `<tr><td>${esc(p.nombre)}</td><td><span class="tag">${p.cantidad}</span></td><td>${money(p.total)}</td></tr>`).join('')
+        : '<tr><td colspan="3" class="muted">Aún no hay ventas pagadas.</td></tr>';
+      $('ventas-categorias').innerHTML = d.ingresos_categoria.length ? d.ingresos_categoria.map((c) =>
+        `<tr><td>${esc(c.categoria)}</td><td>${money(c.total)}</td></tr>`).join('')
+        : '<tr><td colspan="2" class="muted">Aún no hay ingresos por categoría.</td></tr>';
+      $('ventas-historial').innerHTML = d.historial.length ? d.historial.map((v) =>
+        `<tr><td><strong>${esc(v.numero)}</strong></td><td>${esc(v.cliente)}</td><td>${esc(String(v.fecha).replace('T', ' ').slice(0, 16))}</td><td>${badge(v.estado, ESTADOS)}</td><td>${money(v.total)}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="muted">Aún no hay ventas registradas.</td></tr>';
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function loadFrecuentes() {
+    try {
+      const d = await api('/api/admin/clientes/frecuentes');
+      $('frecuentes-body').innerHTML = d.clientes.length ? d.clientes.map((c) => `
+        <tr><td><strong>${esc(c.nombre)}</strong></td><td>${esc(c.telefono)}</td>
+        <td><span class="tag">${c.pedidos}</span></td><td>${money(c.total)}</td><td>${money(c.promedio)}</td>
+        <td>${esc(String(c.ultima).replace('T', ' ').slice(0, 10))}</td>
+        <td><button class="mini-btn" data-profile="${c.cliente_id}">Ver perfil</button></td></tr>`).join('')
+        : '<tr><td colspan="7" class="muted">Aún no hay clientes con compras pagadas.</td></tr>';
+      $('frecuentes-body').querySelectorAll('[data-profile]').forEach((b) =>
+        b.addEventListener('click', () => showPerfil(Number(b.dataset.profile))));
+    } catch (e) { toast(e.message, true); }
+  }
+
+  async function showPerfil(id) {
+    try {
+      const d = await api(`/api/admin/clientes/${id}/perfil`);
+      $('profile-title').textContent = 'Perfil de ' + d.cliente.nombre;
+      let html = `<div class="profile-head"><span class="avatar">${esc(d.cliente.nombre[0] || '?')}</span>
+        <div><strong>${esc(d.cliente.nombre)}</strong><small>Tel. ${esc(d.cliente.telefono)}</small></div></div>
+        <div class="profile-stats">
+          <div><small>Total de visitas</small><strong>${d.total_visitas}</strong></div>
+          <div><small>Total de pedidos</small><strong>${d.total_pedidos}</strong></div>
+          <div><small>Total gastado</small><strong>${money(d.total_gastado)}</strong></div>
+          <div><small>Promedio de compra</small><strong>${money(d.promedio_compra)}</strong></div>
+          <div><small>Última visita</small><strong>${esc(d.ultima_visita)}</strong></div>
+          <div><small>Última compra</small><strong>${esc(String(d.ultima_compra).slice(0, 10))}</strong></div>
+        </div>`;
+      if (d.favoritos.length) {
+        html += '<h4>Productos que compra con mayor frecuencia</h4><div class="table-wrap"><table class="data-table"><thead><tr><th>Producto</th><th>Unidades</th></tr></thead><tbody>'
+          + d.favoritos.map((f) => `<tr><td>${esc(f.nombre)}</td><td><span class="tag">${f.cantidad}</span></td></tr>`).join('')
+          + '</tbody></table></div>';
+      }
+      html += '<h4>Historial completo de pedidos</h4><div class="table-wrap"><table class="data-table"><thead><tr><th>N.º pedido</th><th>Fecha</th><th>Estado</th><th>Total</th><th></th></tr></thead><tbody>';
+      html += d.pedidos.length ? d.pedidos.map((p) => `<tr><td><strong>${esc(p.numero)}</strong></td><td>${esc(String(p.creado).replace('T', ' ').slice(0, 16))}</td><td>${badge(p.estado, ESTADOS)}</td><td>${money(p.total)}</td><td><button class="mini-btn" data-ver-pedido="${p.id}">Ver detalle</button></td></tr>`).join('')
+        : '<tr><td colspan="5" class="muted">Este cliente aún no tiene pedidos.</td></tr>';
+      html += '</tbody></table></div>';
+      $('profile-body').innerHTML = html;
+      $('profile-backdrop').classList.remove('hidden');
+    } catch (e) { toast(e.message, true); }
+  }
+
   async function loadClientes() {
     try {
       const d = await api('/api/admin/clientes?q=' + encodeURIComponent($('cliente-q').value));
       $('clientes-body').innerHTML = d.clientes.length ? d.clientes.map((c) => `
         <tr><td><strong>${esc(c.nombre)}</strong></td><td>${esc(c.telefono)}</td>
         <td><span class="tag">${c.total}</span></td><td>${esc(c.primera)}</td><td>${esc(c.ultima)}</td>
-        <td><div class="row-actions"><button class="mini-btn" data-history="${c.id}">Historial</button><button class="mini-btn danger" data-clear-history="${c.id}" title="Borrar todas las visitas de este cliente">🗑 Borrar historial</button><button class="mini-btn danger" data-delete-customer="${c.id}" title="Eliminar el cliente y todo su historial">🗑 Eliminar cliente</button></div></td></tr>`).join('')
+        <td><div class="row-actions"><button class="mini-btn" data-profile="${c.id}">Perfil</button><button class="mini-btn" data-history="${c.id}">Historial</button><button class="mini-btn danger" data-clear-history="${c.id}" title="Borrar todas las visitas de este cliente">🗑 Borrar historial</button><button class="mini-btn danger" data-delete-customer="${c.id}" title="Eliminar el cliente y todo su historial">🗑 Eliminar cliente</button></div></td></tr>`).join('')
         : '<tr><td colspan="6" class="muted">No hay clientes para ese filtro.</td></tr>';
+      $('clientes-body').querySelectorAll('[data-profile]').forEach((b) =>
+        b.addEventListener('click', () => showPerfil(Number(b.dataset.profile))));
       $('clientes-body').querySelectorAll('[data-history]').forEach((b) =>
         b.addEventListener('click', () => showHistorial(Number(b.dataset.history))));
       $('clientes-body').querySelectorAll('[data-clear-history]').forEach((b) =>
@@ -507,4 +741,6 @@
   etiquetarTablas();
 
   load('resumen');
+  checkPedidosNuevos();
+  setInterval(checkPedidosNuevos, 20000);
 })();

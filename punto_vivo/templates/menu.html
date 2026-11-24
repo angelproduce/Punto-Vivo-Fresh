@@ -10,6 +10,7 @@
     </div>
     <div class="header-actions">
       <span class="visit-chip" id="visit-chip">🎟️ Visita registrada</span>
+      <button class="btn btn-cart btn-sm" id="cart-button" type="button" title="Ver carrito">🛒 Carrito <span class="cart-count" id="cart-count" hidden>0</span></button>
       <button class="btn btn-ghost btn-sm" id="mode-toggle" type="button" aria-pressed="false" title="Cambiar entre modo móvil y escritorio">📱 Modo móvil</button>
       <button class="btn btn-ghost btn-sm" id="install-app" data-install-app type="button" hidden title="Instalar Punto Vivo Fresh en tu dispositivo">📲 Instalar app</button>
       <button class="btn btn-ghost btn-sm" id="share-menu" type="button">↗ Compartir menú</button>
@@ -42,6 +43,11 @@
   </div>
 </main>
 
+<button class="cart-fab" id="cart-fab" type="button" aria-label="Abrir carrito">
+  <span class="cart-fab-icon">🛒<span class="cart-count" id="cart-fab-count" hidden>0</span></span>
+  <span class="cart-fab-label">Ver pedido <strong id="cart-fab-total">RD$ 0.00</strong></span>
+</button>
+
 <footer class="public-footer">
   <div class="brand brand-light"><span class="brand-mark">🌿</span><span><strong>PUNTO VIVO</strong><em>FRESH</em></span></div>
   <p>Hecho al momento pensando en ti. © PUNTO VIVO FRESH</p>
@@ -52,6 +58,70 @@
   <button type="button" class="dialog-close" id="close-product" aria-label="Cerrar">✕</button>
   <div id="product-detail"></div>
 </dialog>
+
+<dialog id="cart-dialog" class="dialog dialog-cart">
+  <button type="button" class="dialog-close" id="close-cart" aria-label="Cerrar">✕</button>
+  <div class="dialog-head"><h3>Tu carrito</h3></div>
+  <div class="dialog-body">
+    <div id="cart-items"></div>
+    <div class="empty-cart" id="cart-empty" hidden>
+      <div>🛒</div><h4>Todavía no agregas productos</h4><p>Elige algo del menú y aparecerá aquí.</p>
+    </div>
+    <div class="cart-totals"><span>Subtotal</span><strong id="cart-subtotal">RD$ 0.00</strong></div>
+    <p class="small-note">Puedes cambiar cantidades y escribir observaciones por producto, por ejemplo «Sin cebolla» o «Extra queso».</p>
+  </div>
+  <div class="dialog-foot">
+    <button type="button" class="btn btn-outline" id="close-cart-2">Seguir comprando</button>
+    <button type="button" class="btn btn-primary" id="go-checkout" disabled>Confirmar pedido</button>
+  </div>
+</dialog>
+
+<dialog id="checkout-dialog" class="dialog dialog-checkout">
+  <button type="button" class="dialog-close" id="close-checkout" aria-label="Cerrar">✕</button>
+  <div class="dialog-head"><h3>Confirmar pedido</h3></div>
+  <div class="dialog-body">
+    <div class="checkout-client"><span>Cliente</span><strong id="checkout-nombre">—</strong><small id="checkout-telefono"></small></div>
+    <div class="checkout-resumen" id="checkout-resumen"></div>
+    <fieldset class="checkout-block">
+      <legend>Entrega</legend>
+      <label class="check-label"><input type="radio" name="checkout-entrega" value="retiro" checked> Recoger en el negocio</label>
+      <label class="check-label"><input type="radio" name="checkout-entrega" value="delivery"> Entrega a domicilio</label>
+      <div id="checkout-direccion" hidden>
+        <label>Dirección<input type="text" id="checkout-dir1" maxlength="200" placeholder="Calle, número, sector"></label>
+        <label>Referencia (opcional)<input type="text" id="checkout-dir2" maxlength="200"></label>
+        <div class="checkout-grid"><label>Ciudad<input type="text" id="checkout-ciudad" maxlength="80"></label><label>Provincia<input type="text" id="checkout-provincia" maxlength="80"></label></div>
+      </div>
+    </fieldset>
+    <div class="checkout-block">
+      <label>Método de pago
+        <select id="checkout-pago">
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="transferencia">Transferencia</option>
+        </select>
+      </label>
+      <p class="small-note">El pago quedará pendiente hasta que el negocio lo confirme en su panel.</p>
+    </div>
+    <label class="checkout-notes">Observaciones generales<textarea id="checkout-notes" rows="3" maxlength="500" placeholder="Ej.: Sin tomate, poco picante…"></textarea></label>
+    <div class="checkout-total"><span>Total del pedido</span><strong id="checkout-total">RD$ 0.00</strong></div>
+  </div>
+  <div class="dialog-foot">
+    <button type="button" class="btn btn-outline" id="back-to-cart">Volver al carrito</button>
+    <button type="button" class="btn btn-primary" id="confirm-order">Confirmar pedido</button>
+  </div>
+</dialog>
+
+<dialog id="success-dialog" class="dialog dialog-success">
+  <div class="success-body">
+    <div class="success-icon">✅</div>
+    <h3>¡Pedido recibido!</h3>
+    <p>Tu número de pedido es</p>
+    <strong id="success-numero">—</strong>
+    <p class="small-note" id="success-mensaje">Te esperamos.</p>
+    <button type="button" class="btn btn-primary" id="success-close">Listo</button>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status" hidden></div>
 <script src="/static/js/public.js" defer></script>
 {% endblock %}

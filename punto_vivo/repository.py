@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import re
 import time
+from datetime import timedelta
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 import httpx
@@ -364,6 +366,8 @@ def update_product(product_id: int, payload: dict[str, Any]) -> None:
 
 
 def delete_product(product_id: int) -> None:
+    if count_product_orders(product_id):
+        raise ValueError('No se puede borrar: el producto aparece en pedidos anteriores.')
     if supabase_enabled():
         _delete("products", product_id)
     else:
@@ -970,6 +974,8 @@ def delete_visit(visit_id: int) -> int:
 
 def delete_customer(customer_id: int) -> int | None:
     """Borra un cliente y todo su historial. Devuelve las visitas borradas o None si no existe."""
+    if count_customer_orders(customer_id):
+        raise ValueError('No se puede eliminar: el cliente tiene pedidos registrados.')
     if supabase_enabled():
         if _row("customers", {"id": f"eq.{customer_id}"}) is None:
             return None
@@ -997,3 +1003,549 @@ def delete_customer(customer_id: int) -> int | None:
         raise
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------- pedidos ---
+
+ESTADOS_PEDIDO = ('pendiente', 'aceptada', 'preparando', 'lista', 'entregada', 'rechazada', 'cancelada')
+METODOS_PAGO = ('efectivo', 'tarjeta', 'transferencia')
+ESTADOS_PAGO = ('pendiente', 'aprobado', 'rechazado', 'reembolsado')
+ESTADOS_SIN_VENTA = ('rechazada', 'cancelada')
+
+
+def _money(value: Any) -> Decimal:
+    return Decimal(str(value or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+
+def _importe(value: Any) -> float:
+    return float(_money(value))
+
+
+def customer_for_visit(visit_id: int) -> int | None:
+    """Resuelve el cliente desde la visita firmada; nunca se acepta desde el navegador."""
+    if supabase_enabled():
+        row = _row("visits", {"select": "customer_id", "id": f"eq.{visit_id}"})
+        return int(row["customer_id"]) if row else None
+    value = _scalar("SELECT customer_id FROM visits WHERE id = ?", (visit_id,))
+    return int(value) if value else None
+
+
+def create_order(visit_id: int, items: list[dict[str, Any]], idempotency_key: str,
+                 delivery_method: str = 'retiro', address: dict[str, Any] | None = None,
+                 notes: str = '', payment_method: str = 'efectivo') -> dict[str, Any]:
+    """Crea pedido + artículos + pago de forma atómica con precios del servidor."""
+    if not idempotency_key or len(idempotency_key) > 120:
+        raise ValueError('Clave de pedido no válida.')
+    if delivery_method not in ('delivery', 'retiro'):
+        raise ValueError('Modalidad de entrega no válida.')
+    if payment_method not in METODOS_PAGO:
+        raise ValueError('Método de pago no válido.')
+    if not isinstance(items, list) or not 1 <= len(items) <= 50:
+        raise ValueError('El pedido debe tener entre 1 y 50 artículos.')
+
+    limpios: list[dict[str, Any]] = []
+    vistos: set[int] = set()
+    for raw in items:
+        try:
+            product_id = int(raw.get('product_id'))
+            quantity = int(raw.get('quantity'))
+        except (TypeError, ValueError):
+            raise ValueError('Artículo del pedido no válido.')
+        if product_id <= 0 or not 1 <= quantity <= 99:
+            raise ValueError('Cantidad no válida.')
+        if product_id in vistos:
+            raise ValueError('Hay un producto repetido en el pedido.')
+        vistos.add(product_id)
+        nota = str(raw.get('notes') or '').strip()[:200]
+        limpios.append({'product_id': product_id, 'quantity': quantity, 'notes': nota})
+
+    cliente_id = customer_for_visit(visit_id)
+    if cliente_id is None:
+        raise ValueError('Visita no válida. Debes registrarte de nuevo.')
+    cliente = get_customer(cliente_id)
+    if cliente is None:
+        raise ValueError('Cliente no encontrado.')
+    nota_general = str(notes or '').strip()[:500]
+
+    if delivery_method == 'delivery':
+        if not isinstance(address, dict) or not str(address.get('address_line1') or '').strip():
+            raise ValueError('La dirección de entrega es obligatoria.')
+        direccion = {
+            'address_line1': str(address.get('address_line1')).strip()[:200],
+            'address_line2': str(address.get('address_line2') or '').strip()[:200],
+            'city': str(address.get('city') or '').strip()[:80],
+            'province': str(address.get('province') or '').strip()[:80],
+            'notes': str(address.get('notes') or '').strip()[:200],
+        }
+    else:
+        direccion = None
+
+    if supabase_enabled():
+        return _rpc('crear_pedido', {
+            'p_visit_id': visit_id,
+            'p_items': limpios,
+            'p_idempotencia_key': idempotency_key,
+            'p_delivery_method': delivery_method,
+            'p_address': direccion,
+            'p_notes': nota_general,
+            'p_payment_method': payment_method,
+        })
+
+    import sqlite3
+    conn = db.connect()
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        anterior = conn.execute(
+            'SELECT id, order_number, total FROM orders WHERE idempotency_key = ?', (idempotency_key,)
+        ).fetchone()
+        if anterior is not None:
+            conn.commit()
+            return {
+                'order_id': anterior['id'], 'order_number': anterior['order_number'],
+                'total': _importe(anterior['total']), 'duplicate': True,
+            }
+
+        ahora = now_local().isoformat(timespec='seconds')
+        direccion_id = None
+        if direccion:
+            cursor = conn.execute(
+                """INSERT INTO delivery_addresses(customer_id, address_line1, address_line2,
+                                                   city, province, notes, created_at)
+                   VALUES(?,?,?,?,?,?,?)""",
+                (cliente_id, direccion['address_line1'], direccion['address_line2'],
+                 direccion['city'], direccion['province'], direccion['notes'], ahora),
+            )
+            direccion_id = cursor.lastrowid
+
+        cursor = conn.execute(
+            """INSERT INTO orders(customer_id, visit_id, delivery_address_id, order_number,
+                                  status, delivery_method, customer_name_snapshot,
+                                  customer_phone_snapshot, notes, subtotal, discount,
+                                  delivery_fee, total, idempotency_key, created_at, updated_at)
+               VALUES(?,?,?,?,'pendiente',?,?,?,?,0,0,0,0,?,?,?)""",
+            (cliente_id, visit_id, direccion_id, 'TEMP-' + idempotency_key,
+             delivery_method, cliente['full_name'], cliente['phone'], nota_general,
+             idempotency_key, ahora, ahora),
+        )
+        orden_id = cursor.lastrowid
+        subtotal = Decimal('0.00')
+        for indice, item in enumerate(limpios):
+            prod = conn.execute(
+                """SELECT p.id, p.name, p.price, p.available, c.active
+                   FROM products p JOIN categories c ON c.id = p.category_id
+                   WHERE p.id = ?""", (item['product_id'],)
+            ).fetchone()
+            if prod is None or prod['available'] != 1 or prod['active'] != 1 or _money(prod['price']) <= 0:
+                raise ValueError('Producto no disponible o precio por definir.')
+            precio = _money(prod['price'])
+            linea = (precio * item['quantity']).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            subtotal += linea
+            conn.execute(
+                """INSERT INTO order_items(order_id, product_id, product_name_snapshot,
+                                            unit_price, quantity, notes, line_total, sort_order)
+                   VALUES(?,?,?,?,?,?,?,?)""",
+                (orden_id, prod['id'], prod['name'], float(precio), item['quantity'],
+                 item['notes'], float(linea), indice),
+            )
+
+        numero = 'PV-' + now_local().strftime('%Y%m%d') + '-' + str(orden_id).zfill(6)
+        conn.execute(
+            'UPDATE orders SET order_number=?, subtotal=?, total=?, updated_at=? WHERE id=?',
+            (numero, float(subtotal), float(subtotal), ahora, orden_id),
+        )
+        conn.execute(
+            """INSERT INTO payments(order_id, method, status, amount, created_at)
+               VALUES(?, ?, 'pendiente', ?, ?)""",
+            (orden_id, payment_method, float(subtotal), ahora),
+        )
+        conn.commit()
+        return {
+            'order_id': orden_id, 'order_number': numero,
+            'total': _importe(subtotal), 'duplicate': False,
+        }
+    except sqlite3.Error as exc:
+        conn.rollback()
+        raise RuntimeError('No se pudo guardar el pedido. Inténtalo de nuevo.') from exc
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _order_dict(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        'id': int(row['id']),
+        'numero': row.get('order_number', ''),
+        'cliente_id': int(row['customer_id']),
+        'cliente': row.get('customer_name_snapshot', ''),
+        'telefono': row.get('customer_phone_snapshot', ''),
+        'estado': row['status'],
+        'entrega': row.get('delivery_method', 'retiro'),
+        'notas': row.get('notes', ''),
+        'subtotal': _importe(row.get('subtotal')),
+        'descuento': _importe(row.get('discount')),
+        'envio': _importe(row.get('delivery_fee')),
+        'total': _importe(row.get('total')),
+        'creado': row.get('created_at', ''),
+        'actualizado': row.get('updated_at', ''),
+    }
+
+
+def _order_rows(filters: dict[str, str] | None = None, limit: int = 100) -> list[dict[str, Any]]:
+    filters = filters or {}
+    q = str(filters.get('q') or '').strip().lower()
+    estado = str(filters.get('estado') or '').strip()
+    pago = str(filters.get('pago') or '').strip()
+    desde = str(filters.get('desde') or '').strip()
+    hasta = str(filters.get('hasta') or '').strip()
+    limite = min(max(int(limit), 1), 1000)
+
+    pagos = _payment_rows()
+    if supabase_enabled():
+        params: dict[str, Any] = {'select': '*', 'order': 'created_at.desc', 'limit': limite}
+        if estado:
+            params['status'] = f'eq.{estado}'
+        rows = [_order_dict(r) for r in _rows('orders', params)]
+    else:
+        sql = 'SELECT * FROM orders WHERE 1=1'
+        params_sql: list[Any] = []
+        if estado:
+            sql += ' AND status = ?'
+            params_sql.append(estado)
+        sql += ' ORDER BY created_at DESC LIMIT ?'
+        params_sql.append(limite)
+        rows = [_order_dict(dict(r)) for r in db.all_rows(sql, tuple(params_sql))]
+
+    for row in rows:
+        pago_row = pagos.get(row['id'])
+        row['pago_estado'] = pago_row['status'] if pago_row else 'pendiente'
+        row['metodo_pago'] = pago_row['method'] if pago_row else ''
+
+    return [r for r in rows
+            if (not pago or r['pago_estado'] == pago)
+            and (not q or q in r['numero'].lower() or q in r['cliente'].lower()
+                 or q in r['telefono'].lower())
+            and (not desde or str(r['creado'])[:10] >= desde)
+            and (not hasta or str(r['creado'])[:10] <= hasta)]
+
+
+def list_orders(filters: dict[str, str] | None = None, limit: int = 100) -> list[dict[str, Any]]:
+    return _order_rows(filters, limit)
+
+
+def count_orders(filters: dict[str, str] | None = None) -> int:
+    return len(_order_rows(filters, 1000))
+
+
+def get_order(order_id: int) -> dict[str, Any] | None:
+    if supabase_enabled():
+        row = _row('orders', {'id': f'eq.{order_id}'})
+        if row is None:
+            return None
+        items = _rows('order_items', {
+            'order_id': f'eq.{order_id}', 'order': 'sort_order.asc,id.asc', 'limit': 1000,
+        })
+        pago = _row('payments', {'order_id': f'eq.{order_id}', 'limit': 1})
+        direccion = None
+        if row.get('delivery_address_id'):
+            direccion = _row('delivery_addresses', {'id': f'eq.{row["delivery_address_id"]}'})
+    else:
+        raw = db.one('SELECT * FROM orders WHERE id = ?', (order_id,))
+        if raw is None:
+            return None
+        row = dict(raw)
+        items = [dict(r) for r in db.all_rows(
+            'SELECT * FROM order_items WHERE order_id = ? ORDER BY sort_order, id', (order_id,)
+        )]
+        pago_raw = db.one('SELECT * FROM payments WHERE order_id = ? ORDER BY id LIMIT 1', (order_id,))
+        pago = dict(pago_raw) if pago_raw else None
+        direccion = None
+        if row.get('delivery_address_id'):
+            dir_raw = db.one('SELECT * FROM delivery_addresses WHERE id = ?', (row['delivery_address_id'],))
+            direccion = dict(dir_raw) if dir_raw else None
+
+    data = _order_dict(row)
+    data['items'] = [{
+        'id': int(i['id']), 'producto_id': int(i['product_id']),
+        'nombre': i['product_name_snapshot'], 'precio': _importe(i['unit_price']),
+        'cantidad': int(i['quantity']), 'notas': i.get('notes', ''),
+        'subtotal': _importe(i['line_total']),
+    } for i in items]
+    data['pago'] = None if pago is None else {
+        'metodo': pago['method'], 'estado': pago['status'],
+        'monto': _importe(pago['amount']), 'referencia': pago.get('provider_payment_id', ''),
+        'pagado_en': pago.get('paid_at'),
+    }
+    data['direccion'] = None if direccion is None else {
+        'linea1': direccion.get('address_line1', ''),
+        'linea2': direccion.get('address_line2', ''),
+        'ciudad': direccion.get('city', ''),
+        'provincia': direccion.get('province', ''),
+        'notas': direccion.get('notes', ''),
+    }
+    return data
+
+
+def customer_orders(customer_id: int) -> list[dict[str, Any]]:
+    if supabase_enabled():
+        rows = _rows('orders', {
+            'customer_id': f'eq.{customer_id}', 'order': 'created_at.desc', 'limit': 1000,
+        })
+        return [_order_dict(r) for r in rows]
+    return [_order_dict(dict(r)) for r in db.all_rows(
+        'SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC', (customer_id,)
+    )]
+
+
+def count_customer_orders(customer_id: int) -> int:
+    if supabase_enabled():
+        return len(_rows('orders', {'select': 'id', 'customer_id': f'eq.{customer_id}', 'limit': 1000}))
+    return int(_scalar('SELECT COUNT(*) FROM orders WHERE customer_id = ?', (customer_id,)))
+
+
+def count_product_orders(product_id: int) -> int:
+    if supabase_enabled():
+        return len(_rows('order_items', {'select': 'id', 'product_id': f'eq.{product_id}', 'limit': 1000}))
+    return int(_scalar('SELECT COUNT(*) FROM order_items WHERE product_id = ?', (product_id,)))
+
+
+def _payment_rows() -> dict[int, dict[str, Any]]:
+    if supabase_enabled():
+        rows = _rows('payments', {'select': '*', 'limit': 1000})
+    else:
+        rows = [dict(r) for r in db.all_rows('SELECT * FROM payments', ())]
+    return {int(r['order_id']): r for r in rows}
+
+
+def _es_venta(order: dict[str, Any], pagos: dict[int, dict[str, Any]]) -> bool:
+    pago = pagos.get(order['id'])
+    return (pago is not None and pago['status'] == 'aprobado'
+            and order['estado'] not in ESTADOS_SIN_VENTA)
+
+
+def paid_orders() -> list[dict[str, Any]]:
+    """Pedidos contabilizados como venta: pagados y no rechazados/cancelados."""
+    orders = list_orders(limit=1000)
+    pagos = _payment_rows()
+    return [o for o in orders if _es_venta(o, pagos)]
+
+
+def sales_summary() -> dict[str, Any]:
+    """Ventas definitivas = pedidos marcados como pagados por el administrador."""
+    orders = list_orders(limit=1000)
+    pagos = _payment_rows()
+    hoy = now_local()
+    semana = (hoy - timedelta(days=6)).strftime('%Y-%m-%d')
+    mes = hoy.strftime('%Y-%m')
+    diario = hoy.strftime('%Y-%m-%d')
+
+    vendidas = [o for o in orders if _es_venta(o, pagos)]
+    def total_en(prefijo: str) -> float:
+        return _importe(sum((o['total'] for o in vendidas if str(o['creado']).startswith(prefijo)), 0.0))
+
+    ventas_dia = total_en(diario)
+    ventas_semana = _importe(sum((o['total'] for o in vendidas if str(o['creado'])[:10] >= semana), 0.0))
+    ventas_mes = total_en(mes)
+    total_ventas = _importe(sum((o['total'] for o in vendidas), 0.0))
+
+    pendientes = [o for o in orders if o['estado'] == 'pendiente'
+                  and (pagos.get(o['id']) or {}).get('status') == 'pendiente']
+    pagadas = vendidas
+    entregadas = [o for o in vendidas if o['estado'] == 'entregada']
+    serie: dict[str, float] = {}
+    for dia in range(6, -1, -1):
+        clave = (hoy - timedelta(days=dia)).strftime('%Y-%m-%d')
+        serie[clave] = _importe(sum((o['total'] for o in vendidas if str(o['creado'])[:10] == clave), 0.0))
+
+    # Los artículos se leen una sola vez y se filtran por pedidos ya contabilizados.
+    if supabase_enabled():
+        items = _rows('order_items', {'select': '*', 'limit': 1000})
+        productos = _rows('products', {'select': 'id,category_id,name', 'limit': 1000})
+        categorias = _rows('categories', {'select': 'id,name', 'limit': 1000})
+    else:
+        items = [dict(r) for r in db.all_rows('SELECT * FROM order_items', ())]
+        productos = [dict(r) for r in db.all_rows('SELECT id,category_id,name FROM products', ())]
+        categorias = [dict(r) for r in db.all_rows('SELECT id,name FROM categories', ())]
+    cat_nombres = {int(c['id']): c['name'] for c in categorias}
+    prod_cat = {int(p['id']): int(p['category_id']) for p in productos}
+    prod_nombres = {int(p['id']): p['name'] for p in productos}
+    ids_venta = {o['id'] for o in vendidas}
+    top: dict[int, dict[str, Any]] = {}
+    categorias_ingreso: dict[str, float] = {}
+    for item in items:
+        if int(item['order_id']) not in ids_venta:
+            continue
+        pid = int(item['product_id'])
+        nombre = item.get('product_name_snapshot') or prod_nombres.get(pid, 'Producto')
+        cant = int(item['quantity'])
+        subtotal_item = _importe(item['line_total'])
+        if pid not in top:
+            top[pid] = {'producto_id': pid, 'nombre': nombre, 'cantidad': 0, 'total': 0.0}
+        top[pid]['cantidad'] += cant
+        top[pid]['total'] = _importe(top[pid]['total'] + subtotal_item)
+        cat = cat_nombres.get(prod_cat.get(pid, -1), 'Sin categoría')
+        categorias_ingreso[cat] = _importe(categorias_ingreso.get(cat, 0.0) + subtotal_item)
+
+    return {
+        'ventas_hoy': ventas_dia,
+        'ventas_semana': ventas_semana,
+        'ventas_mes': ventas_mes,
+        'total_ventas': total_ventas,
+        'total_pedidos': len(orders),
+        'promedio_compra': _importe(Decimal(str(total_ventas)) / len(vendidas)) if vendidas else 0.0,
+        'productos_top': sorted(top.values(), key=lambda x: (-x['cantidad'], x['nombre']))[:6],
+        'ingresos_categoria': sorted(
+            [{'categoria': k, 'total': v} for k, v in categorias_ingreso.items()],
+            key=lambda x: -x['total'],
+        ),
+        'historial': [{
+            'numero': o['numero'], 'cliente': o['cliente'], 'fecha': o['creado'],
+            'total': o['total'], 'estado': o['estado'],
+        } for o in vendidas[:20]],
+        'pendientes_pago': len(pendientes),
+        'monto_pendiente': _importe(sum((o['total'] for o in pendientes), 0.0)),
+        'pagadas': len(pagadas),
+        'monto_pagado': total_ventas,
+        'entregadas': len(entregadas),
+        'monto_entregado': _importe(sum((o['total'] for o in entregadas), 0.0)),
+        'serie_ventas': [{'fecha': k, 'total': v} for k, v in serie.items()],
+    }
+
+
+def customer_profile(customer_id: int) -> dict[str, Any] | None:
+    cliente = get_customer(customer_id)
+    if cliente is None:
+        return None
+    visitas = customer_visits(customer_id)
+    pedidos = customer_orders(customer_id)
+    pagos = _payment_rows()
+    vendidas = [o for o in pedidos if _es_venta(o, pagos)]
+    total = _importe(sum((o['total'] for o in vendidas), 0.0))
+    ids_venta = {o['id'] for o in vendidas}
+
+    if supabase_enabled():
+        items = _rows('order_items', {'select': '*', 'limit': 1000})
+    else:
+        items = [dict(r) for r in db.all_rows('SELECT * FROM order_items', ())]
+    favoritos: dict[int, dict[str, Any]] = {}
+    for item in items:
+        if int(item['order_id']) not in ids_venta:
+            continue
+        pid = int(item['product_id'])
+        if pid not in favoritos:
+            favoritos[pid] = {
+                'producto_id': pid,
+                'nombre': item.get('product_name_snapshot', 'Producto'),
+                'cantidad': 0,
+            }
+        favoritos[pid]['cantidad'] += int(item['quantity'])
+
+    return {
+        'cliente': {
+            'id': customer_id, 'nombre': cliente['full_name'], 'telefono': cliente['phone'],
+        },
+        'total_visitas': len(visitas),
+        'ultima_visita': visitas[0]['visit_date'] if visitas else '—',
+        'total_pedidos': len(pedidos),
+        'total_gastado': total,
+        'promedio_compra': _importe(Decimal(str(total)) / len(vendidas)) if vendidas else 0.0,
+        'ultima_compra': vendidas[0]['creado'] if vendidas else '—',
+        'pedidos': pedidos,
+        'favoritos': sorted(favoritos.values(), key=lambda x: -x['cantidad'])[:6],
+    }
+
+
+def frequent_customers(limit: int = 6) -> list[dict[str, Any]]:
+    orders = list_orders(limit=1000)
+    pagos = _payment_rows()
+    resumen: dict[int, dict[str, Any]] = {}
+    for order in orders:
+        if not _es_venta(order, pagos):
+            continue
+        cid = order['cliente_id']
+        if cid not in resumen:
+            resumen[cid] = {
+                'cliente_id': cid, 'nombre': order['cliente'], 'telefono': order['telefono'],
+                'pedidos': 0, 'total': 0.0, 'ultima': order['creado'],
+            }
+        data = resumen[cid]
+        data['pedidos'] += 1
+        data['total'] = _importe(data['total'] + order['total'])
+        data['promedio'] = _importe(Decimal(str(data['total'])) / data['pedidos'])
+    return sorted(resumen.values(), key=lambda x: (-x['total'], -x['pedidos']))[:limit]
+
+
+def _set_payment(order_id: int, status: str, referencia: str = '') -> None:
+    ahora = now_local().isoformat(timespec='seconds')
+    if supabase_enabled():
+        pago = _row('payments', {'order_id': f'eq.{order_id}', 'limit': 1})
+        if pago is None:
+            return
+        payload: dict[str, Any] = {'status': status}
+        if status == 'aprobado':
+            payload['paid_at'] = ahora
+            if referencia:
+                payload['provider'] = 'administrador'
+                payload['provider_payment_id'] = referencia[:120]
+        elif status == 'pendiente':
+            payload['paid_at'] = None
+        _update('payments', int(pago['id']), payload)
+    else:
+        pago = db.one('SELECT id FROM payments WHERE order_id = ? ORDER BY id LIMIT 1', (order_id,))
+        if pago is None:
+            return
+        if status == 'aprobado':
+            db.execute(
+                """UPDATE payments SET status=?, paid_at=?, provider='administrador',
+                                       provider_payment_id=? WHERE id=?""",
+                (status, ahora, referencia[:120], pago['id']),
+            )
+        else:
+            db.execute(
+                'UPDATE payments SET status=?, paid_at=? WHERE id=?',
+                (status, None if status == 'pendiente' else ahora, pago['id']),
+            )
+
+
+def update_order_status(order_id: int, accion: str, referencia: str = '') -> dict[str, Any] | None:
+    estados = {
+        'aceptar': 'aceptada', 'rechazar': 'rechazada', 'preparando': 'preparando',
+        'lista': 'lista', 'entregada': 'entregada', 'cancelar': 'cancelada',
+    }
+    if accion not in estados:
+        raise ValueError('Acción de pedido no válida.')
+    pedido = get_order(order_id)
+    if pedido is None:
+        return None
+    nuevo = estados[accion]
+    actual = pedido['estado']
+    if actual in ('entregada', 'rechazada', 'cancelada') and nuevo != actual:
+        raise ValueError('Ese pedido ya está cerrado.')
+    ahora = now_local().isoformat(timespec='seconds')
+    if supabase_enabled():
+        _update('orders', order_id, {'status': nuevo, 'updated_at': ahora})
+    else:
+        db.execute('UPDATE orders SET status=?, updated_at=? WHERE id=?', (nuevo, ahora, order_id))
+    if nuevo in ('rechazada', 'cancelada') and pedido['pago'] and pedido['pago']['estado'] == 'aprobado':
+        _set_payment(order_id, 'reembolsado', referencia)
+    return get_order(order_id)
+
+
+def set_order_paid(order_id: int, pagado: bool, referencia: str = '') -> dict[str, Any] | None:
+    """Solo el administrador puede confirmar un pago; el cliente nunca llega aquí."""
+    pedido = get_order(order_id)
+    if pedido is None:
+        return None
+    if pedido['estado'] in ('rechazada', 'cancelada'):
+        raise ValueError('No se puede marcar como pagado un pedido rechazado o cancelado.')
+    if pedido['pago'] and pedido['pago']['estado'] == 'reembolsado':
+        raise ValueError('Ese pago fue reembolsado.')
+    ahora = now_local().isoformat(timespec='seconds')
+    _set_payment(order_id, 'aprobado' if pagado else 'pendiente', referencia)
+    if supabase_enabled():
+        _update('orders', order_id, {'updated_at': ahora})
+    else:
+        db.execute('UPDATE orders SET updated_at=? WHERE id=?', (ahora, order_id))
+    return get_order(order_id)
+

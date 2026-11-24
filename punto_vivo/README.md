@@ -91,71 +91,90 @@ Para publicarlo en Internet, sigue [**la guía de Render + Supabase**](DEPLOY_RE
 3. El servidor valida, normaliza el teléfono y registra **cliente + visita en una transacción atómica**.
 4. Solo si el guardado es correcto se devuelve `/menu` y se entrega una cookie firmada.
 5. `/menu` y `/api/menu` rechazan el acceso sin esa cookie.
+6. En el menú elige productos, ajusta cantidades, escribe observaciones y confirma el pedido.
+7. El servidor valida disponibilidad y precios de nuevo, guarda el pedido con un número único y lo deja pendiente de pago.
 
 Reglas importantes:
 
 - El cliente se identifica por **teléfono normalizado** (10 dígitos): no se crea uno nuevo al regresar.
 - Cada envío válido genera una visita nueva; `visit_number` se calcula con `MAX + 1` dentro de la transacción.
 - `request_token` (UUID generado en el navegador) hace idempotente el doble envío; además se ignora un segundo envío del mismo teléfono en menos de 20 segundos.
+- Los pedidos usan su propio `request_token`: un doble clic en **Confirmar pedido** no crea dos pedidos.
+- **Las visitas no son compras.** El historial de visitas y el historial de pedidos son independientes.
 - Fecha y hora se guardan en zona `America/Santo_Domingo` (UTC-4) junto al timestamp exacto.
 - Si falla el guardado, la API responde error y la página **no redirige**; el usuario puede reintentar con el mismo token.
 
 ---
 
-## 4. Menú y administración
+## 4. Menú, carrito y panel administrativo
 
-- **Público:** búsqueda y filtros por categoría siempre visibles (todas las categorías se muestran en filas, sin deslizar), ficha de producto, botón compartir, aviso de datos de demostración.
-- **Panel:** resumen con KPIs y gráfico de 7 días, top de clientes, gestión de clientes con historial, botón **🗑 Borrar historial** (por cliente y desde su historial) y botón **🗑 Eliminar cliente** (borra el cliente y todas sus visitas), gestión de visitas con búsqueda y filtros de fecha, botón **🗑 Eliminar visitas** (borra las del filtro actual o todas) y eliminación individual, exportación CSV (clientes y visitas), CRUD de productos y categorías, activación/desactivación, orden, subida de fotos (redimensionadas a WebP). Las eliminaciones piden confirmación y no se pueden deshacer.
+- **Público:** búsqueda y filtros por categoría siempre visibles (todas las categorías se muestran en filas, sin deslizar), ficha de producto, botón compartir, carrito persistente con cantidades y observaciones por producto, checkout con entrega/retiro, dirección, método de pago y observaciones generales, confirmación con número de pedido y aviso de datos de demostración.
+- **Panel:** resumen con KPIs de visitas **y ventas**, gestión de pedidos (filtrar, ver detalle, aceptar, preparar, marcar listo/entregado, rechazar o cancelar, confirmar pago, exportar CSV), sección **Ventas** (ingresos de 7 días, situación de cobros, productos más vendidos, ingresos por categoría e historial), sección **Clientes frecuentes** (compras pagadas, total y promedio), perfil del cliente (visitas, pedidos, gasto y favoritos), notificación de pedidos nuevos, top de clientes, gestión de visitas, exportaciones CSV, CRUD de productos y categorías, activación/desactivación, orden y subida de fotos (redimensionadas a WebP). Las eliminaciones piden confirmación y no se pueden deshacer.
 - **QR:** descarga PNG y SVG del mismo enlace permanente al formulario de registro.
 
-Los productos iniciales son **12 ejemplos marcados como DEMO** con precio `0 = "Precio por definir"`. No son datos comerciales reales: reemplázalos desde *Administrar menú*. Las fotos de demostración se cargan desde Unsplash; si no hay internet, la interfaz muestra un ilustrador de respaldo por categoría. Puedes subir tus propias fotos desde el panel (se guardan optimizadas en `static/uploads/`).
+Los productos iniciales son **12 ejemplos marcados como DEMO** con precio `0 = "Precio por definir"`. No son datos comerciales reales: reemplázalos desde *Administrar menú* y asigna precios reales. Los productos sin precio **no se pueden agregar al carrito** ni pedir. Las fotos de demostración se cargan desde Unsplash; si no hay internet, la interfaz muestra un ilustrador de respaldo por categoría. Puedes subir tus propias fotos desde el panel (se guardan optimizadas en `static/uploads/`).
 
-Los cambios en productos/categorías se reflejan al recargar el menú público (sin caché).
+Los cambios en productos/categorías se reflejan al recargar el menú público (sin caché). El carrito se revalida contra `/api/menu` antes de confirmar: si un producto dejó de estar disponible o cambió de precio, se actualiza o se retira con un aviso.
 
 ---
 
-## 5. Base de datos
+## 5. Pedidos, cobros y ventas
 
-Persistencia actual: **SQLite con WAL** en `state/punto_vivo.sqlite3`, con claves foráneas, restricciones `CHECK`, índices y unicidad. El registro atómico usa `BEGIN IMMEDIATE` para serializar escrituras concurrentes.
+- El cliente elige el método de pago, pero **no puede marcarlo como pagado**: queda `pendiente` hasta que el administrador confirme el cobro en el panel.
+- Una venta definitiva es un pedido con pago `aprobado` y estado distinto de `rechazada`/`cancelada`. Si se rechaza o cancela un pedido ya pagado, el pago pasa a `reembolsado` y deja de contar.
+- El resumen muestra por separado pedidos nuevos, pendientes de pago, ventas del día/semana/mes y monto pendiente.
+- El mismo pedido se contabiliza **una sola vez**; los pedidos pendientes, rechazados y cancelados nunca suman ingresos.
+- `discount` y `delivery_fee` existen en la base con valor `0` por defecto; no se aplican cargos automáticos.
+- Los estados de pedido son `pendiente`, `aceptada`, `preparando`, `lista`, `entregada`, `rechazada` y `cancelada`.
+- Los estados de pago son `pendiente`, `aprobado`, `rechazado` y `reembolsado`.
+- Los clientes ven **solo sus pedidos** desde su cookie firmada; no existe una ruta pública para consultar pedidos por ID ajeno.
+- No se puede eliminar un cliente ni un producto que aparece en pedidos (la API devuelve `409`).
+
+---
+
+## 6. Base de datos
+
+Persistencia local: **SQLite con WAL** en `state/punto_vivo.sqlite3`, con claves foráneas, restricciones `CHECK`, índices y unicidad. El registro atómico y la creación de pedidos usan `BEGIN IMMEDIATE` para serializar escrituras concurrentes.
 
 Se incluye además [`database/supabase_schema.sql`](database/supabase_schema.sql) con:
 
-- las cinco tablas (`customers`, `visits`, `categories`, `products`, `admins`) en PostgreSQL,
+- las tablas `customers`, `visits`, `categories`, `products`, `admins`, `delivery_addresses`, `orders`, `order_items` y `payments`,
 - índices y restricciones,
-- **RLS** activado (el público solo puede leer categorías activas y productos disponibles; datos personales y admins cerrados),
-- la función `registrar_visita(...)` `SECURITY DEFINER` con bloqueo por teléfono e idempotencia,
+- **RLS** activado (el público solo puede leer categorías activas y productos disponibles; datos personales, pedidos y admins cerrados),
+- las funciones `registrar_visita(...)` y `crear_pedido(...)` `SECURITY DEFINER` con idempotencia y validación de precios en servidor,
 - bucket de Storage para fotografías.
 
-La migración ya está implementada en [`repository.py`](repository.py): con `PV_SUPABASE_URL` y `PV_SUPABASE_SERVICE_ROLE_KEY` definidas, todas las consultas y transacciones usan Supabase REST/RPC; sin esas variables, se usa SQLite local. Para migrar solo hay que ejecutar el SQL en Supabase y rellenar las variables (ver [DEPLOY_RENDER.md](DEPLOY_RENDER.md)). Nunca pongas la service role key ni la contraseña del admin en JavaScript ni en archivos públicos.
+La migración ya está implementada en [`repository.py`](repository.py): con `PV_SUPABASE_URL` y `PV_SUPABASE_SERVICE_ROLE_KEY` definidas, todas las consultas y transacciones usan Supabase REST/RPC; sin esas variables, se usa SQLite local. **Antes de publicar los pedidos hay que volver a ejecutar todo el SQL en Supabase** (ver [DEPLOY_VERCEL.md](DEPLOY_VERCEL.md)) para crear tablas y la RPC `crear_pedido`. Nunca pongas la service role key ni la contraseña del admin en JavaScript ni en archivos públicos.
 
 Las fotos siguen el mismo patrón: [`storage.py`](storage.py) guarda en `static/uploads/` en local y en el bucket `menu-images` de Supabase Storage en producción.
 
 ---
 
-## 6. Seguridad y privacidad
+## 7. Seguridad y privacidad
 
 - Contraseñas con PBKDF2-SHA256 (210 000 iteraciones) + salt aleatorio.
 - Sesiones de admin en Base de datos, cookie HttpOnly y CSRF en todos los mutadores.
+- Confirmación de pago restringida al panel: exige sesión de admin, CSRF y `confirmado: true`; el navegador del cliente no puede llamarla.
 - Límite de intentos por IP y por teléfono (ventana de 1 hora) y campo honeypot.
-- Validación en servidor de nombre, teléfono, consentimiento y token.
+- Validación en servidor de nombre, teléfono, consentimiento, token, cantidades y precios; el total del navegador nunca se confía.
 - Teléfonos enmascarados en el resumen público del panel (`***-***-0000`); completos solo en gestión privada y exportaciones.
 - Aviso de privacidad obligatorio antes del registro.
 - Sin claves de APIs ni credenciales en el navegador.
 
 ---
 
-## 7. Pruebas
+## 8. Pruebas
 
 ```bat
 set PYTHONPATH=%cd%\src;%cd%
 .venv\Scripts\python.exe -m punto_vivo.tests.run_tests
 ```
 
-Cubre 33 comprobaciones: cliente nuevo/existente, incremento de visitas, fechas/horas, doble envío, redirección y bloqueo de menú, QR PNG/SVG, login y CSRF, creación/edición de productos, subida de imagen, exportación CSV, filtros y validaciones.
+Cubre 112 comprobaciones: cliente nuevo/existente, visitas, fechas/horas, doble envío, menú y QR, login/CSRF/bloqueo, productos, imágenes, CSV, PWA, carrito y checkout, validación de precios, idempotencia de pedidos, aislamiento entre clientes, estados, pago del administrador, ventas, rechazos, perfiles, frecuentes y protección de datos.
 
 ---
 
-## 8. Estructura
+## 9. Estructura
 
 ```
 punto_vivo/
@@ -176,4 +195,4 @@ punto_vivo/
 ```
 
 Local: servidor `http://127.0.0.1:8790` · Panel `/admin` · Registro QR `/bienvenida`.
-Producción: URL HTTPS de Render (configurada en `PV_PUBLIC_BASE_URL`).
+Producción: `https://punto-vivo-fresh.vercel.app` (configurada en `PV_PUBLIC_BASE_URL`).

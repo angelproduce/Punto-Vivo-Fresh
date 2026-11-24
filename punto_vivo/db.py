@@ -80,12 +80,78 @@ CREATE TABLE IF NOT EXISTS rate_events (
     created_epoch REAL NOT NULL
 );
 
+-- ---------------------------------------------------------------- pedidos ---
+CREATE TABLE IF NOT EXISTS delivery_addresses (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id  INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+    address_line1 TEXT   NOT NULL,
+    address_line2 TEXT   NOT NULL DEFAULT '',
+    city         TEXT    NOT NULL DEFAULT '',
+    province     TEXT    NOT NULL DEFAULT '',
+    notes        TEXT    NOT NULL DEFAULT '',
+    created_at   TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id              INTEGER NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+    visit_id                 INTEGER REFERENCES visits(id) ON DELETE SET NULL,
+    delivery_address_id      INTEGER REFERENCES delivery_addresses(id) ON DELETE SET NULL,
+    order_number             TEXT    NOT NULL UNIQUE,
+    status                   TEXT    NOT NULL DEFAULT 'pendiente'
+                             CHECK(status IN ('pendiente','aceptada','preparando','lista','entregada','rechazada','cancelada')),
+    delivery_method          TEXT    NOT NULL DEFAULT 'retiro'
+                             CHECK(delivery_method IN ('delivery','retiro')),
+    customer_name_snapshot   TEXT    NOT NULL,
+    customer_phone_snapshot  TEXT    NOT NULL CHECK(length(customer_phone_snapshot) = 10),
+    notes                    TEXT    NOT NULL DEFAULT '',
+    subtotal                 NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK(subtotal >= 0),
+    discount                 NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK(discount >= 0),
+    delivery_fee             NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK(delivery_fee >= 0),
+    total                    NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK(total >= 0),
+    idempotency_key          TEXT    NOT NULL UNIQUE,
+    created_at               TEXT    NOT NULL,
+    updated_at               TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id              INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id            INTEGER NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+    product_name_snapshot TEXT    NOT NULL,
+    unit_price            NUMERIC(10, 2) NOT NULL CHECK(unit_price > 0),
+    quantity              INTEGER NOT NULL CHECK(quantity BETWEEN 1 AND 99),
+    notes                 TEXT    NOT NULL DEFAULT '',
+    line_total            NUMERIC(10, 2) NOT NULL CHECK(line_total >= 0),
+    sort_order            INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id            INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    method              TEXT    NOT NULL CHECK(method IN ('efectivo','tarjeta','transferencia')),
+    status              TEXT    NOT NULL DEFAULT 'pendiente'
+                        CHECK(status IN ('pendiente','aprobado','rechazado','reembolsado')),
+    amount              NUMERIC(10, 2) NOT NULL CHECK(amount >= 0),
+    provider            TEXT    NOT NULL DEFAULT '',
+    provider_payment_id TEXT    NOT NULL DEFAULT '',
+    paid_at             TEXT,
+    created_at          TEXT    NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 CREATE INDEX IF NOT EXISTS idx_visits_created   ON visits(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_visits_customer  ON visits(customer_id, visit_number);
 CREATE INDEX IF NOT EXISTS idx_visits_phone     ON visits(phone);
 CREATE INDEX IF NOT EXISTS idx_products_cat     ON products(category_id, sort_order, id);
 CREATE INDEX IF NOT EXISTS idx_rate_events      ON rate_events(scope, key_hash, created_epoch);
+CREATE INDEX IF NOT EXISTS idx_orders_customer  ON orders(customer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_status    ON orders(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_number    ON orders(order_number);
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_product ON order_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_payments_order   ON payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_addresses_customer ON delivery_addresses(customer_id);
 """
 
 DEMO_CATEGORIES = [

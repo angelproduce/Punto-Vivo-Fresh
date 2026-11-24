@@ -25,7 +25,7 @@ No se intenta subir vídeo ni ejecutar FFmpeg: eso no cabe en Vercel y no es par
 ## 2. Preparar Supabase
 
 1. Crea un proyecto gratuito en <https://supabase.com> (elige la región más cercana).
-2. **SQL Editor → New query**: pega todo [`database/supabase_schema.sql`](database/supabase_schema.sql) y pulsa **Run**. Si ya lo ejecutaste antes, vuelve a ejecutarlo: añade la tabla `pv_meta`, que evita que dos funciones frías siembren el menú demo a la vez.
+2. **SQL Editor → New query**: pega todo [`database/supabase_schema.sql`](database/supabase_schema.sql) y pulsa **Run**. Si ya lo ejecutaste antes, **vuelve a ejecutarlo**: añade `pv_meta` (evita que dos funciones frías siembren el menú demo a la vez) y, sobre todo, las tablas `delivery_addresses`, `orders`, `order_items`, `payments` y la RPC `crear_pedido`, necesarias para confirmar pedidos. Sin este paso los pedidos fallarán aunque el código ya esté publicado.
 3. Crea además el bucket, si el script no lo hiciera: Storage → New bucket → `menu-images`, marcar **Public bucket**.
 4. **Project Settings → API**: copia **Project URL** (`PV_SUPABASE_URL`) y el secreto **service_role** (`PV_SUPABASE_SERVICE_ROLE_KEY`).
    - **Nunca uses la clave `anon`**: la app escribe visitas, sesiones y admins.
@@ -122,6 +122,9 @@ Te pedirá la contraseña de forma segura. No pegues la service_role en el chat 
 | `GET /bienvenida` | Formulario de registro |
 | `GET /admin/login` | Pantalla de acceso |
 | Registrar visita de prueba | Fila nueva en Supabase → Table Editor → `visits` |
+| Crear producto con precio real desde el panel | Fila nueva en `products` con `price > 0` |
+| Confirmar pedido desde el menú | Filas nuevas en `orders`, `order_items` y `payments` (pago `pendiente`) |
+| Marcar pagado en el panel | Pago `aprobado` y venta contabilizada una sola vez |
 | Subir foto desde el panel (≤ 4 MB) | Archivo en Storage → `menu-images` |
 | Escanear el QR | Abre el registro en el dominio `vercel.app` |
 
@@ -139,6 +142,8 @@ Te pedirá la contraseña de forma segura. No pegues la service_role en el chat 
 | `PV_SECRET_KEY es obligatorio...` | Añade la variable en Vercel; el disco es de solo lectura. |
 | Fotos rotas | Bucket `menu-images` público y `PV_SUPABASE_BUCKET` correcto. |
 | No puedo entrar al panel | Crea el admin en Supabase (paso 6); el local no se migra solo. |
+| `No se pudo guardar el pedido` / RPC no encontrada | Vuelve a ejecutar **todo** `supabase_schema.sql`; la RPC `crear_pedido` debe existir en `public`. |
+| `Producto no disponible o precio por definir` | Asigna precio real al producto desde **Administrar menú**; los 12 ejemplos DEMO tienen precio `0`. |
 | Primera petición lenta | Arranque en frío de Vercel Functions; normal en el plan gratuito. |
 
 ---
@@ -147,4 +152,4 @@ Te pedirá la contraseña de forma segura. No pegues la service_role en el chat 
 
 - En tu PC, `python -m punto_vivo` sigue usando **SQLite + `static/uploads/`** en el puerto **8790** si no defines `PV_SUPABASE_*`.
 - El generador sigue en el puerto **8765** con FFmpeg, modelos y redes sociales intactos.
-- Ninguna ruta, validación ni regla de negocio de PUNTO VIVO cambió: solo se cambió el destino del despliegue y el límite de foto en producción.
+- El registro, el menú y la administración siguen iguales; además están las rutas de pedidos, pagos, ventas y clientes frecuentes, con las mismas validaciones en SQLite y Supabase.

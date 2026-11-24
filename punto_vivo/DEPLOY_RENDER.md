@@ -50,11 +50,12 @@ Si aparece `.env`, `state/` o cualquier clave, **no subas nada** y corrige `.git
 
 1. En Supabase, **New project**. Elige la región más cercana y guarda la contraseña de la base de datos (no la necesita la app).
 2. Abre **SQL Editor → New query**.
-3. Pega **todo** el contenido de [`database/supabase_schema.sql`](database/supabase_schema.sql) y pulsa **Run**.
+3. Pega **todo** el contenido de [`database/supabase_schema.sql`](database/supabase_schema.sql) y pulsa **Run**. Si ya lo ejecutaste antes, vuelve a ejecutarlo por completo.
 4. Verifica que no haya errores. El script crea:
    - tablas con IDs enteros (compatibles con las rutas actuales `/api/producto/{id}`),
    - RLS (el público solo ve categorías activas y productos disponibles),
-   - las RPC `registrar_visita` y `pv_allow_event`,
+   - las RPC `registrar_visita`, `pv_allow_event` y `crear_pedido`,
+   - tablas de pedidos, artículos, pagos y direcciones,
    - el bucket público `menu-images` para las fotos.
 5. En **Project Settings → API** copia dos valores:
    - **Project URL** → `PV_SUPABASE_URL`
@@ -161,7 +162,7 @@ Esto es exactamente por lo que se añadió `repository.py`: en local sigue usand
 | Síntoma | Causa probable / solución |
 |---|---|
 | Error `Supabase ... 401/403` | Falta la service_role key o es la anon. Revisa las variables en Render y que el SQL se ejecutó completo. |
-| `No se pudo guardar la visita` | RPCs no creadas: vuelve a ejecutar `supabase_schema.sql` en SQL Editor. |
+| `No se pudo guardar la visita` o el pedido | RPCs no creadas: vuelve a ejecutar `supabase_schema.sql` en SQL Editor (incluye `registrar_visita` y `crear_pedido`). |
 | El QR apunta a `127.0.0.1` | `PV_PUBLIC_BASE_URL` está vacío. Rellénalo y descarga el QR de nuevo. |
 | `Origen no permitido` (403) al usar el panel | `PV_TRUST_PROXY` debe ser `1` para que se lea `X-Forwarded-Host`. |
 | Las fotos salen rotas tras reiniciar | El bucket `menu-images` debe ser público y `PV_SUPABASE_BUCKET` debe coincidir. |

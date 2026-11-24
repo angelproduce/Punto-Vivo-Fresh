@@ -321,7 +321,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123m" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123n" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -332,7 +332,7 @@ def run() -> None:
           and "state.categoria = chip.dataset.cat" in _public_js)
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
-          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261123m" in _sw.text)
+          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261123n" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -354,6 +354,147 @@ def run() -> None:
           'id="delete-visitas"' in _admin_html
           and 'data-delete-visit=' in _admin_js and 'data-clear-history=' in _admin_js
           and 'data-borrar-historial=' in _admin_js and '.btn-danger{' in _admin_css)
+
+    # ---------------------------------------------------- pedidos y ventas
+    pedido_producto = anonimo.post("/api/admin/productos", headers=admin_headers(), json={
+        "category_id": cat_id, "name": "Producto para pedido", "description": "Prueba de pedidos",
+        "price": 250, "image": "", "available": True, "is_demo": False, "sort_order": 98})
+    check("72. Producto con precio para pedidos", pedido_producto.status_code == 200, pedido_producto.text)
+    ppid = pedido_producto.json()["id"]
+
+    reset_ventana()
+    rped = registrar("Cliente Pedidos", "8092223333", "token-cliente-pedidos-12345")
+    check("73. Cliente del pedido registrado", rped.status_code == 200, rped.text)
+    cid_pedidos = db.one("SELECT id FROM customers WHERE phone='8092223333'")[0]
+    actual = client.get("/api/cliente/actual").json()
+    check("74. Nombre y teléfono vienen del servidor",
+          actual["nombre"] == "Cliente Pedidos" and actual["telefono"] == "8092223333"
+          and actual["cliente_id"] == cid_pedidos)
+
+    token1 = "pedido-token-uno-123456"
+    cuerpo1 = {
+        "items": [{"product_id": ppid, "quantity": 2, "notes": "Sin cebolla"}],
+        "request_token": token1, "delivery_method": "retiro",
+        "notes": "Poco picante", "payment_method": "efectivo",
+    }
+    pedido1 = client.post("/api/pedido", json=cuerpo1)
+    check("75. Confirmar pedido desde el menú",
+          pedido1.status_code == 200 and pedido1.json()["duplicate"] is False, pedido1.text)
+    num1 = pedido1.json()["numero"]
+    check("76. Número único por pedido", re.match(r"^PV-\d{8}-\d{6}$", num1) is not None, num1)
+
+    fila = db.one("SELECT * FROM orders WHERE order_number=?", (num1,))
+    check("77. Pedido guardado con total del servidor",
+          fila is not None and float(fila["subtotal"]) == 500.0 and float(fila["total"]) == 500.0
+          and fila["status"] == "pendiente" and fila["customer_id"] == cid_pedidos)
+    item_pedido = db.one("SELECT * FROM order_items WHERE order_id=?", (fila["id"],))
+    check("78. Precio y nombre copiados en el detalle",
+          item_pedido["product_name_snapshot"] == "Producto para pedido"
+          and float(item_pedido["unit_price"]) == 250.0 and item_pedido["quantity"] == 2
+          and item_pedido["notes"] == "Sin cebolla")
+    pago1 = db.one("SELECT * FROM payments WHERE order_id=?", (fila["id"],))
+    check("79. Pago pendiente hasta confirmación del admin",
+          pago1["status"] == "pendiente" and pago1["method"] == "efectivo")
+
+    duplicado = client.post("/api/pedido", json=cuerpo1)
+    check("80. Doble clic no crea otro pedido",
+          duplicado.status_code == 200 and duplicado.json()["duplicate"] is True
+          and duplicado.json()["numero"] == num1
+          and db.one("SELECT COUNT(*) FROM orders")[0] == 1, duplicado.text)
+
+    mios = client.get("/api/pedidos/mios").json()["pedidos"]
+    check("81. El cliente ve solamente su pedido", len(mios) == 1 and mios[0]["numero"] == num1)
+
+    otro_cliente = TestClient(app)
+    reset_ventana()
+    r_otro = otro_cliente.post("/api/visita", json={
+        "full_name": "Otro Cliente", "phone": "8094445555", "consent": True,
+        "request_token": "token-otro-cliente-12345", "website": ""})
+    check("82. Segundo cliente registrado", r_otro.status_code == 200, r_otro.text)
+    check("83. Nadie puede consultar pedidos ajenos",
+          otro_cliente.get("/api/pedidos/mios").json()["pedidos"] == [])
+
+    listado_pedidos = anonimo.get("/api/admin/pedidos", headers=admin_headers()).json()
+    check("84. Pedido visible en administración",
+          listado_pedidos["total"] == 1 and listado_pedidos["pedidos"][0]["numero"] == num1)
+    detalle = anonimo.get(f"/api/admin/pedidos/{fila['id']}", headers=admin_headers()).json()
+    check("85. Detalle administrativo con artículos y pago",
+          len(detalle["items"]) == 1 and detalle["pago"]["estado"] == "pendiente"
+          and detalle["items"][0]["nombre"] == "Producto para pedido")
+
+    estados = []
+    for accion, esperado in (("aceptar", "aceptada"), ("preparando", "preparando"),
+                             ("lista", "lista"), ("entregada", "entregada")):
+        cambiar = anonimo.patch(f"/api/admin/pedidos/{fila['id']}/estado",
+                                headers=admin_headers(), json={"accion": accion})
+        estados.append(cambiar.status_code == 200 and cambiar.json()["estado"] == esperado)
+    check("86. Aceptar, preparar, listo y entregado", all(estados), str(estados))
+
+    sin_confirmar = anonimo.patch(f"/api/admin/pedidos/{fila['id']}/pago",
+                                  headers=admin_headers(), json={"pagado": True})
+    check("87. No se marca pagado sin confirmación válida", sin_confirmar.status_code == 400)
+    pagado = anonimo.patch(f"/api/admin/pedidos/{fila['id']}/pago", headers=admin_headers(),
+                           json={"pagado": True, "confirmado": True})
+    check("88. Administrador confirma el pago",
+          pagado.status_code == 200 and pagado.json()["pago"]["estado"] == "aprobado", pagado.text)
+    ventas1 = anonimo.get("/api/admin/ventas", headers=admin_headers()).json()
+    check("89. Venta definitiva cuando se marca pagado",
+          ventas1["total_ventas"] == 500.0 and ventas1["ventas_hoy"] == 500.0
+          and ventas1["pagadas"] == 1)
+    ventas2 = anonimo.get("/api/admin/ventas", headers=admin_headers()).json()
+    check("90. El mismo pedido no se contabiliza dos veces", ventas2["total_ventas"] == 500.0)
+
+    reset_ventana()
+    registrar("Cliente Rechazo", "8093334444", "token-cliente-rechazo-12345")
+    pedido2 = client.post("/api/pedido", json={
+        "items": [{"product_id": ppid, "quantity": 1, "notes": ""}],
+        "request_token": "pedido-token-dos-123456", "delivery_method": "retiro",
+        "notes": "", "payment_method": "tarjeta"})
+    check("91. Segundo pedido registrado", pedido2.status_code == 200, pedido2.text)
+    num2 = pedido2.json()["numero"]
+    fila2 = db.one("SELECT * FROM orders WHERE order_number=?", (num2,))
+    anonimo.patch(f"/api/admin/pedidos/{fila2['id']}/pago", headers=admin_headers(),
+                  json={"pagado": True, "confirmado": True})
+    check("92. Segunda venta antes del rechazo",
+          anonimo.get("/api/admin/ventas", headers=admin_headers()).json()["total_ventas"] == 750.0)
+    rechazo = anonimo.patch(f"/api/admin/pedidos/{fila2['id']}/estado",
+                            headers=admin_headers(), json={"accion": "rechazar"})
+    ventas3 = anonimo.get("/api/admin/ventas", headers=admin_headers()).json()
+    check("93. Rechazado nunca suma y su pago se reembolsa",
+          rechazo.status_code == 200 and ventas3["total_ventas"] == 500.0
+          and db.one("SELECT status FROM payments WHERE order_id=?", (fila2["id"],))[0] == "reembolsado")
+
+    perfil = anonimo.get(f"/api/admin/clientes/{cid_pedidos}/perfil", headers=admin_headers()).json()
+    check("94. Perfil con visitas, pedidos, gasto y productos favoritos",
+          perfil["total_pedidos"] == 1 and float(perfil["total_gastado"]) == 500.0
+          and perfil["total_visitas"] >= 1 and perfil["favoritos"][0]["cantidad"] == 2)
+    frecuentes = anonimo.get("/api/admin/clientes/frecuentes", headers=admin_headers()).json()["clientes"]
+    check("95. Clientes frecuentes según compras pagadas",
+          any(c["cliente_id"] == cid_pedidos and float(c["total"]) == 500.0 for c in frecuentes))
+
+    pedidos_csv = anonimo.get("/api/admin/exportar/pedidos.csv", headers=admin_headers())
+    ventas_csv = anonimo.get("/api/admin/exportar/ventas.csv", headers=admin_headers())
+    texto_pedidos = pedidos_csv.content.decode("utf-8-sig")
+    texto_ventas = ventas_csv.content.decode("utf-8-sig")
+    check("96. Exportación CSV de pedidos y ventas",
+          "N.º pedido" in texto_pedidos and num1 in texto_pedidos
+          and num1 in texto_ventas and num2 not in texto_ventas)
+
+    guarda_cliente = anonimo.delete(f"/api/admin/clientes/{cid_pedidos}", headers=admin_headers())
+    guarda_producto = anonimo.delete(f"/api/admin/productos/{ppid}", headers=admin_headers())
+    check("97. Cliente con pedidos no se puede eliminar", guarda_cliente.status_code == 409)
+    check("98. Producto en pedidos no se puede eliminar", guarda_producto.status_code == 409)
+
+    _menu_pedidos = client.get("/menu").text
+    _public_js_pedidos = (_base_ui / "static" / "js" / "public.js").read_text(encoding="utf-8")
+    check("99. Carrito y checkout presentes en el menú",
+          'id="cart-button"' in _menu_pedidos and 'id="cart-dialog"' in _menu_pedidos
+          and 'id="checkout-dialog"' in _menu_pedidos and 'data-add=' in _public_js_pedidos
+          and "/api/pedido" in _public_js_pedidos)
+    check("100. Secciones PEDIDOS, VENTAS y CLIENTES FRECUENTES",
+          'data-section="pedidos"' in _admin_tpl and 'data-section="ventas"' in _admin_tpl
+          and 'data-section="frecuentes"' in _admin_tpl
+          and 'id="profile-backdrop"' in anonimo.get("/admin").text)
 
     # Eliminaciones: se ejecutan al final para no afectar al resto de comprobaciones
     registrar("María Borrar", "8091112222", "token-borrar-historial-123")
@@ -397,7 +538,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261123m" in _sw.text)
+          and "pvf-static-20261123n" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js
