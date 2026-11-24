@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from punto_vivo import admin, db  # noqa: E402
+from punto_vivo import admin, db, repository, storage  # noqa: E402
 from punto_vivo.app import app  # noqa: E402
 
 client = TestClient(app)
@@ -325,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124c" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124d" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -336,7 +336,8 @@ def run() -> None:
           and "state.categoria = chip.dataset.cat" in _public_js)
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
-          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124c" in _sw.text)
+          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124c" not in _sw.text
+          and "pvf-static-20261124d" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -507,6 +508,10 @@ def run() -> None:
           and 'id="delete-venta-password"' in _admin_tpl
           and 'data-borrar-venta=' in _admin_js
           and "`/api/admin/pedidos/${borrarVentaId}`" in _admin_js
+          and 'data-borrar-pedido=' in _admin_js
+          and 'data-borrar-comprobante=' in _admin_js
+          and 'id="comprobante-borrar"' in _admin_tpl
+          and "`/api/admin/pedidos/${destinoId}/comprobante`" in _admin_js
           and 'colspan="6"' in _admin_js
           and re.search(r'product-desc">\$\{esc\(p\.description\)\}</p>\s*<span class="price ', _public_js) is not None
           and '.product-body > .price{' in _admin_css)
@@ -716,6 +721,44 @@ def run() -> None:
     check("140. La transferencia confirmada sí cuenta como venta",
           anonimo.get("/api/admin/ventas", headers=admin_headers()).json()["total_ventas"] == 250.0)
 
+    ruta_prueba = db.one("SELECT file_path FROM payment_proofs WHERE order_id=?", (tid,))['file_path']
+    clave_mala_proof = anonimo.request("DELETE", f"/api/admin/pedidos/{tid}/comprobante",
+                                       headers=admin_headers(), json={"password": "ClaveIncorrecta123!"})
+    check("140b. Contraseña incorrecta no borra el comprobante",
+          clave_mala_proof.status_code == 400
+          and db.one("SELECT COUNT(*) FROM payment_proofs WHERE order_id=?", (tid,))[0] == 1
+          and Path(ruta_prueba).exists(), clave_mala_proof.text)
+    sin_sesion_proof = cliente_sin_admin.request("DELETE", f"/api/admin/pedidos/{tid}/comprobante",
+                                                 json={"password": ADMIN_PASS})
+    check("140c. Borrar comprobante exige sesión de administrador",
+          sin_sesion_proof.status_code == 401 and Path(ruta_prueba).exists(), sin_sesion_proof.text)
+    borrar_proof = anonimo.request("DELETE", f"/api/admin/pedidos/{tid}/comprobante",
+                                   headers=admin_headers(), json={"password": ADMIN_PASS})
+    check("140d. Contraseña correcta borra archivo y registro del comprobante",
+          borrar_proof.status_code == 200 and borrar_proof.json()["pedido_id"] == tid
+          and db.one("SELECT COUNT(*) FROM payment_proofs WHERE order_id=?", (tid,))[0] == 0
+          and not Path(ruta_prueba).exists(), borrar_proof.text)
+    repetir_proof = anonimo.request("DELETE", f"/api/admin/pedidos/{tid}/comprobante",
+                                    headers=admin_headers(), json={"password": ADMIN_PASS})
+    check("140e. Borrar el comprobante dos veces da 404 y no altera la venta",
+          repetir_proof.status_code == 404
+          and anonimo.get("/api/admin/ventas", headers=admin_headers()).json()["total_ventas"] == 250.0,
+          repetir_proof.text)
+    fila_tid = db.one("SELECT customer_id, bank_account_id FROM orders WHERE id=?", (tid,))
+    ruta_orden_borrada = storage.save_private_file(
+        'comprobante-orden-borrada.png', png, 'image/png')
+    repository.save_payment_proof(
+        tid, fila_tid['customer_id'], fila_tid['bank_account_id'],
+        'comprobante-orden-borrada.png', ruta_orden_borrada, 'image/png', len(png))
+    borrar_con_comprobante = anonimo.request("DELETE", f"/api/admin/pedidos/{tid}",
+                                             headers=admin_headers(),
+                                             json={"password": ADMIN_PASS})
+    check("140f. Borrar un pedido también borra su comprobante privado",
+          borrar_con_comprobante.status_code == 200
+          and db.one("SELECT COUNT(*) FROM orders WHERE id=?", (tid,))[0] == 0
+          and db.one("SELECT COUNT(*) FROM payment_proofs WHERE order_id=?", (tid,))[0] == 0
+          and not Path(ruta_orden_borrada).exists(), borrar_con_comprobante.text)
+
     clave_push = anonimo.get("/api/admin/push/clave", headers=admin_headers())
     check("141. Consulta de clave push sin exponer secretos",
           clave_push.status_code == 200 and isinstance(clave_push.json()["configurado"], bool)
@@ -784,7 +827,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261124c" in _sw.text)
+          and "pvf-static-20261124d" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js

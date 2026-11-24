@@ -96,6 +96,13 @@ def admin_id(session: dict[str, Any]) -> int | None:
     return int(admin["id"]) if admin else None
 
 
+def verificar_password_admin(session: dict[str, Any], password: str) -> None:
+    """Exige la contraseña del administrador que tiene la sesión abierta."""
+    admin = repository.get_admin_by_email(session["email"])
+    if admin is None or not security.verify_password(password, admin["password_hash"]):
+        raise HTTPException(status_code=400, detail="Contraseña incorrecta.")
+
+
 def require_visitor(request: Request) -> bool:
     return security.verify_visitor(request.cookies.get(VISITOR_COOKIE)) is not None
 
@@ -838,6 +845,22 @@ def api_comprobante_admin(pedido_id: int, session=Depends(require_admin)) -> dic
     }
 
 
+@app.delete("/api/admin/pedidos/{pedido_id}/comprobante")
+def api_comprobante_borrar(pedido_id: int, payload: BorrarPedidoIn,
+                           session=Depends(require_admin)) -> dict[str, Any]:
+    """Borra el archivo privado y su registro; jamás cambia el estado del pago."""
+    verificar_password_admin(session, payload.password)
+    prueba = repository.get_payment_proof(pedido_id)
+    if prueba is None:
+        raise HTTPException(status_code=404, detail="Este pedido no tiene comprobante.")
+    try:
+        storage.delete_private_file(prueba['ruta'])
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="No se pudo borrar el comprobante.") from exc
+    repository.delete_payment_proof(prueba['id'])
+    return {'eliminado': 1, 'pedido_id': pedido_id, 'nombre': prueba['nombre']}
+
+
 @app.get("/api/admin/pagos/transferencias")
 def api_transferencias(session=Depends(require_admin)) -> dict[str, Any]:
     pedidos = [p for p in repository.list_orders(limit=1000)
@@ -907,12 +930,17 @@ def api_push_desuscribir(payload: PushSubscriptionIn,
 def api_pedido_borrar(pedido_id: int, payload: BorrarPedidoIn,
                       session=Depends(require_admin)) -> dict[str, Any]:
     """Borrado definitivo de un pedido, solo tras confirmar la contraseña del admin."""
-    admin = repository.get_admin_by_email(session["email"])
-    if admin is None or not security.verify_password(payload.password, admin["password_hash"]):
-        raise HTTPException(status_code=400, detail="Contraseña incorrecta.")
+    verificar_password_admin(session, payload.password)
+    prueba = repository.get_payment_proof(pedido_id)
     borrado = repository.delete_order(pedido_id)
     if borrado is None:
         raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    if prueba is not None:
+        # El registro ya se borró en cascada; si el archivo falla, no queda dato expuesto.
+        try:
+            storage.delete_private_file(prueba['ruta'])
+        except Exception:
+            pass
     return borrado
 
 

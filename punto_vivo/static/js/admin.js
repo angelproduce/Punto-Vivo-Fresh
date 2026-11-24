@@ -6,6 +6,9 @@
   const csrf = document.querySelector('meta[name="pv-csrf"]')?.content || sessionStorage.getItem('pv_csrf') || '';
   const $ = (id) => document.getElementById(id);
   let borrarVentaId = null;
+  let borrarComprobanteId = null;
+  let borrarModo = 'pedido';
+  let comprobanteActualId = null;
 
   async function api(path, options = {}) {
     const opts = {...options};
@@ -146,6 +149,27 @@
   };
   const badge = (valor, mapa) => `<span class="badge badge-${esc(valor)}">${esc(mapa[valor] || valor)}</span>`;
 
+  function abrirBorrar(tipo, id, numero = '') {
+    borrarModo = tipo;
+    borrarVentaId = tipo === 'comprobante' ? null : id;
+    borrarComprobanteId = tipo === 'comprobante' ? id : null;
+    const titulo = tipo === 'comprobante' ? 'Borrar comprobante'
+      : (numero ? 'Borrar pedido' : 'Borrar venta');
+    $('delete-venta-title').textContent = titulo;
+    $('delete-venta-detalle').textContent = tipo === 'comprobante'
+      ? 'Se borrará el archivo y su registro. El estado del pago no cambia; vuelve a revisarlo antes de confirmarlo. No se puede deshacer.'
+      : (numero
+        ? `Pedido ${numero}: se borrarán el pedido, sus artículos, su pago y su comprobante si existe. No se puede deshacer.`
+        : 'Se borrará el pedido, sus artículos y su pago. No se puede deshacer.');
+    $('delete-venta-submit').textContent = tipo === 'comprobante' ? 'Borrar comprobante'
+      : (numero ? 'Borrar pedido' : 'Borrar definitivamente');
+    $('delete-venta-password').value = '';
+    $('order-backdrop').classList.add('hidden');
+    $('comprobante-backdrop').classList.add('hidden');
+    $('delete-venta-backdrop').classList.remove('hidden');
+    $('delete-venta-password').focus();
+  }
+
   function pedidoQuery() {
     return new URLSearchParams({
       q: $('pedido-q').value, estado: $('pedido-estado').value, pago: $('pedido-pago').value,
@@ -179,10 +203,12 @@
     }
     if (p.comprobante_enviado) {
       html += `<button class="mini-btn" data-ver-comprobante="${p.id}">Ver comprobante</button>`;
+      html += `<button class="mini-btn danger" data-borrar-comprobante="${p.id}" type="button">🗑 Borrar comprobante</button>`;
     }
     if (!['entregada', 'rechazada', 'cancelada'].includes(p.estado)) {
       html += `<button class="mini-btn danger" data-id="${p.id}" data-accion="cancelar">Cancelar</button>`;
     }
+    html += `<button class="mini-btn danger" data-borrar-pedido="${p.id}" type="button">🗑 Borrar pedido</button>`;
     return html;
   }
 
@@ -267,6 +293,14 @@
   document.addEventListener('click', (event) => {
     const revision = event.target.closest('[data-revision]');
     if (revision) { abrirRevision(Number(revision.dataset.id), revision.dataset.revision); return; }
+    const borrarComprobante = event.target.closest('[data-borrar-comprobante]');
+    if (borrarComprobante) { abrirBorrar('comprobante', Number(borrarComprobante.dataset.borrarComprobante)); return; }
+    const borrarPedido = event.target.closest('[data-borrar-pedido]');
+    if (borrarPedido) {
+      const numero = borrarPedido.closest('tr')?.querySelector('strong')?.textContent || '';
+      abrirBorrar('pedido', Number(borrarPedido.dataset.borrarPedido), numero);
+      return;
+    }
     const comprobante = event.target.closest('[data-ver-comprobante]');
     if (comprobante) { verComprobante(Number(comprobante.dataset.verComprobante)); return; }
     const ver = event.target.closest('[data-ver-pedido]');
@@ -370,6 +404,7 @@
 
   async function verComprobante(id) {
     try {
+      comprobanteActualId = id;
       const d = await api(`/api/admin/pedidos/${id}/comprobante`);
       $('comprobante-title').textContent = 'Comprobante · ' + esc(d.nombre);
       const fuente = d.url || d.datos;
@@ -380,6 +415,10 @@
       $('comprobante-backdrop').classList.remove('hidden');
     } catch (e) { toast(e.message, true); }
   }
+
+  $('comprobante-borrar').addEventListener('click', () => {
+    if (comprobanteActualId) abrirBorrar('comprobante', comprobanteActualId);
+  });
 
   // -------------------------------------------------- configuración bancaria
   function limpiarCuenta() {
@@ -535,26 +574,30 @@
   $('ventas-historial').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-borrar-venta]');
     if (!btn) return;
-    borrarVentaId = Number(btn.dataset.borrarVenta);
     const numero = btn.closest('tr')?.querySelector('strong')?.textContent || '';
-    $('delete-venta-detalle').textContent = `Pedido ${numero}: se borrarán el pedido, sus artículos y su pago. No se puede deshacer.`;
-    $('delete-venta-password').value = '';
-    $('delete-venta-backdrop').classList.remove('hidden');
-    $('delete-venta-password').focus();
+    abrirBorrar('pedido', Number(btn.dataset.borrarVenta), numero);
   });
 
   $('delete-venta-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const submit = $('delete-venta-submit');
-    if (submit.disabled || !borrarVentaId) return;
+    const destinoId = borrarModo === 'comprobante' ? borrarComprobanteId : borrarVentaId;
+    if (submit.disabled || !destinoId) return;
     const password = $('delete-venta-password').value;
     if (!password) { toast('Escribe tu contraseña de administrador.', true); return; }
     submit.disabled = true;
     submit.textContent = 'Borrando…';
     try {
-      const d = await api(`/api/admin/pedidos/${borrarVentaId}`, {method: 'DELETE', body: {password}});
+      if (borrarModo === 'comprobante') {
+        const d = await api(`/api/admin/pedidos/${destinoId}/comprobante`, {method: 'DELETE', body: {password}});
+        toast(`Comprobante ${d.nombre || ''} borrado. El pago no ha cambiado de estado.`);
+      } else {
+        const d = await api(`/api/admin/pedidos/${borrarVentaId}`, {method: 'DELETE', body: {password}});
+        toast(`Pedido ${d.numero || ''} borrado definitivamente.`);
+      }
       $('delete-venta-backdrop').classList.add('hidden');
-      toast(`Pedido ${d.numero || ''} borrado definitivamente.`);
+      $('comprobante-backdrop').classList.add('hidden');
+      loadPagos();
       loadVentas();
       loadResumen();
       loadPedidos();
@@ -565,6 +608,9 @@
       submit.disabled = false;
       submit.textContent = 'Borrar definitivamente';
       borrarVentaId = null;
+      borrarComprobanteId = null;
+      comprobanteActualId = null;
+      borrarModo = 'pedido';
     }
   });
 
