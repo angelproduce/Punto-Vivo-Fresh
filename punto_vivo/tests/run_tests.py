@@ -669,9 +669,14 @@ def run() -> None:
           and db.one("SELECT status FROM payments WHERE order_id=?", (tid,))[0] == "comprobante_recibido",
           subida.text)
     archivo = anonimo.get(f"/api/admin/pedidos/{tid}/comprobante", headers=admin_headers())
+    detalle_admin = anonimo.get(f"/api/admin/pedidos/{tid}", headers=admin_headers())
     check("133. El admin puede ver el comprobante privado",
           archivo.status_code == 200
-          and archivo.json()["datos"].startswith("data:image/png;base64,"), archivo.text)
+          and archivo.json()["datos"].startswith("data:image/png;base64,")
+          and detalle_admin.status_code == 200
+          and bool(detalle_admin.json().get("comprobante_enviado"))
+          and detalle_admin.json().get("comprobante", {}).get("nombre") == "comprobante.png",
+          archivo.text)
 
     revision = anonimo.patch(f"/api/admin/pedidos/{tid}/revision", headers=admin_headers(),
                              json={"decision": "en_verificacion", "nota": "Revisando depósito"})

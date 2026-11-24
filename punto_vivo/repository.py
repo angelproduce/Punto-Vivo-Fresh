@@ -1307,6 +1307,7 @@ def get_order(order_id: int) -> dict[str, Any] | None:
     data['comprobante'] = None if proof is None else {
         'nombre': proof['nombre'], 'enviado': proof['enviado'], 'tamano': proof['tamano'],
     }
+    data['comprobante_enviado'] = proof['enviado'] if proof else ''
     cuenta = get_active_payment_account(row.get('bank_account_id'))
     if cuenta is None and supabase_enabled():
         cuenta = next((c for c in list_payment_accounts()
