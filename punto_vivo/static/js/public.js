@@ -278,6 +278,8 @@
   let items = leer(CART_KEY, []);
   let notasGenerales = leer(NOTES_KEY, '');
   let menuCache = null;
+  let cuentasBancarias = [];
+  let ultimoPedido = null;
   if (!Array.isArray(items)) items = [];
   items = items.filter((i) => i && Number(i.id) > 0 && Number(i.price) > 0)
     .map((i) => ({
@@ -461,6 +463,46 @@
         <strong>${money(i.price * i.qty)}</strong>
       </div>`).join('');
     checkoutTotal.textContent = money(subtotal());
+    document.getElementById('checkout-transferir').textContent = money(subtotal());
+  }
+
+  async function cargarCuentas() {
+    try {
+      const res = await fetch('/api/pagos/cuentas');
+      if (!res.ok) return;
+      const data = await res.json();
+      cuentasBancarias = data.cuentas || [];
+      document.getElementById('checkout-cuentas').innerHTML = cuentasBancarias.length
+        ? cuentasBancarias.map((c, i) => `
+          <label class="bank-option"><input type="radio" name="checkout-cuenta" value="${c.id}" ${i === 0 ? 'checked' : ''}>
+            <span><strong>${esc(c.banco)}</strong><small>${esc(c.titular)} · ${esc(c.tipo || 'Cuenta')} · ${esc(c.numero)}</small>
+            ${c.identificacion ? `<small>Identificación: ${esc(c.identificacion)}</small>` : ''}
+            ${c.instrucciones ? `<small>${esc(c.instrucciones)}</small>` : ''}</span></label>`).join('')
+        : '<p class="small-note">Aún no hay cuentas bancarias configuradas por el negocio.</p>';
+    } catch (e) { /* el checkout sigue funcionando con efectivo */ }
+  }
+
+  function actualizarMetodo() {
+    const transferencia = document.getElementById('checkout-pago').value === 'transferencia';
+    document.getElementById('checkout-bancos').hidden = !transferencia;
+    document.getElementById('checkout-transferir').textContent = money(subtotal());
+  }
+  document.getElementById('checkout-pago').addEventListener('change', actualizarMetodo);
+  actualizarMetodo();
+  cargarCuentas();
+
+  async function subirComprobante(pedidoId, archivo, estadoEl) {
+    if (!archivo) { toast('Selecciona el comprobante antes de enviarlo.', true); return; }
+    const datos = new FormData();
+    datos.append('file', archivo);
+    const res = await fetch(`/api/pedidos/${pedidoId}/comprobante`, {method: 'POST', body: datos});
+    let data = {};
+    try { data = await res.json(); } catch (e) { /* respuesta vacía */ }
+    if (!res.ok) throw new Error(data.detail || 'No se pudo subir el comprobante.');
+    if (estadoEl) estadoEl.textContent = 'Comprobante recibido. El negocio debe verificar la transferencia.';
+    toast('Comprobante enviado. El pago sigue pendiente de verificación.');
+    if (window.pvRecargarMisPedidos) window.pvRecargarMisPedidos();
+    return data;
   }
 
   const toggleDireccion = () => {
@@ -508,13 +550,25 @@
       document.getElementById('checkout-dir1').focus();
       return;
     }
+    const metodo = document.getElementById('checkout-pago').value;
+    let bancoId = null;
+    if (metodo === 'transferencia') {
+      if (!cuentasBancarias.length) {
+        toast('Todavía no hay cuentas bancarias configuradas. Elige efectivo o espera al negocio.', true);
+        return;
+      }
+      const seleccion = document.querySelector('input[name="checkout-cuenta"]:checked');
+      if (!seleccion) { toast('Selecciona el banco al que transferirás.', true); return; }
+      bancoId = Number(seleccion.value);
+    }
     const body = {
       items: items.map((i) => ({product_id: i.id, quantity: i.qty, notes: i.notes})),
       request_token: tokenPedido(),
       delivery_method: entrega,
       address: direccion,
       notes: notasGenerales.trim(),
-      payment_method: document.getElementById('checkout-pago').value,
+      payment_method: metodo,
+      bank_account_id: bancoId,
     };
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Enviando…';
@@ -532,8 +586,15 @@
       saveNotes();
       renderCart();
       checkoutDialog.close();
+      ultimoPedido = data;
       document.getElementById('success-numero').textContent = data.numero || '—';
       document.getElementById('success-mensaje').textContent = data.mensaje || 'Te esperamos.';
+      const bloquePrueba = document.getElementById('success-proof');
+      bloquePrueba.hidden = metodo !== 'transferencia';
+      if (metodo === 'transferencia') {
+        document.getElementById('success-proof-file').value = '';
+        document.getElementById('success-proof-estado').textContent = '';
+      }
       successDialog.showModal();
     } catch (err) {
       toast(err.message, true);
@@ -545,6 +606,97 @@
 
   document.getElementById('success-close').addEventListener('click', () => successDialog.close());
   successDialog.addEventListener('click', (e) => { if (e.target === successDialog) successDialog.close(); });
+  document.getElementById('success-mis-pedidos').addEventListener('click', () => {
+    successDialog.close();
+    document.getElementById('mis-pedidos-dialog').showModal();
+    if (window.pvRecargarMisPedidos) window.pvRecargarMisPedidos();
+  });
+  document.getElementById('success-proof-subir').addEventListener('click', async () => {
+    if (!ultimoPedido || !ultimoPedido.pedido_id) return;
+    const estadoEl = document.getElementById('success-proof-estado');
+    try {
+      await subirComprobante(ultimoPedido.pedido_id,
+        document.getElementById('success-proof-file').files[0], estadoEl);
+    } catch (err) { toast(err.message, true); }
+  });
   toggleDireccion();
   renderCart();
+})();
+
+/* ------------------------------------------------ mis pedidos y comprobantes */
+(() => {
+  'use strict';
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const money = (v) => 'RD$ ' + Number(v || 0).toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const dialog = document.getElementById('mis-pedidos-dialog');
+  if (!dialog) return;
+  const lista = document.getElementById('mis-pedidos-lista');
+  const toastEl = document.getElementById('toast');
+  const PAGOS = {
+    pendiente: 'Pendiente de pago', comprobante_recibido: 'Comprobante recibido',
+    en_verificacion: 'En verificación', aprobado: 'Pago confirmado',
+    rechazado: 'Pago rechazado', reembolsado: 'Reembolsado',
+  };
+  const badge = (estado) => `<span class="pay-badge pay-${esc(estado)}">${esc(PAGOS[estado] || estado)}</span>`;
+  const toast = (texto, error = false) => {
+    toastEl.textContent = texto;
+    toastEl.style.background = error ? '#a32828' : '';
+    toastEl.hidden = false;
+    clearTimeout(toastEl._timer);
+    toastEl._timer = setTimeout(() => { toastEl.hidden = true; }, 3500);
+  };
+
+  async function cargar() {
+    try {
+      const res = await fetch('/api/pedidos/mios');
+      if (!res.ok) throw new Error('No se pudieron cargar tus pedidos.');
+      const data = await res.json();
+      const pedidos = data.pedidos || [];
+      lista.innerHTML = pedidos.length ? pedidos.map((p) => {
+        const puedeSubir = p.metodo_pago === 'transferencia' &&
+          ['pendiente', 'comprobante_recibido', 'en_verificacion', 'rechazado'].includes(p.pago_estado);
+        return `<article class="order-card">
+          <div class="order-card-head"><strong>${esc(p.numero)}</strong><small>${esc(String(p.creado).replace('T', ' ').slice(0, 16))}</small></div>
+          <div class="order-card-row"><span>Total</span><strong>${money(p.total)}</strong></div>
+          <div class="order-card-row"><span>Estado del pedido</span><span>${esc(p.estado)}</span></div>
+          <div class="order-card-row"><span>Estado del pago</span>${badge(p.pago_estado)}</div>
+          ${p.banco ? `<div class="order-card-row"><span>Banco</span><span>${esc(p.banco)}</span></div>` : ''}
+          ${p.pago_nota ? `<p class="small-note">Nota del negocio: ${esc(p.pago_nota)}</p>` : ''}
+          ${puedeSubir ? `<label class="proof-label">Comprobante (JPG, PNG o PDF · máx. 5 MB)
+              <input type="file" data-proof-file="${p.id}" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"></label>
+            <button type="button" class="btn btn-outline btn-sm" data-proof-subir="${p.id}">Enviar comprobante</button>` : ''}
+        </article>`;
+      }).join('') : '<p class="muted">Todavía no tienes pedidos registrados.</p>';
+    } catch (err) {
+      lista.innerHTML = `<p class="muted">${esc(err.message)}</p>`;
+    }
+  }
+
+  window.pvRecargarMisPedidos = cargar;
+  document.getElementById('mis-pedidos-button').addEventListener('click', () => {
+    cargar();
+    dialog.showModal();
+  });
+  ['close-mis-pedidos', 'close-mis-pedidos-2'].forEach((id) =>
+    document.getElementById(id).addEventListener('click', () => dialog.close()));
+  dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  lista.addEventListener('click', async (e) => {
+    const boton = e.target.closest('[data-proof-subir]');
+    if (!boton) return;
+    const id = Number(boton.dataset.proofSubir);
+    const archivo = lista.querySelector(`[data-proof-file="${id}"]`)?.files[0];
+    boton.disabled = true;
+    try {
+      const res = await fetch(`/api/pedidos/${id}/comprobante`, {
+        method: 'POST', body: (() => { const f = new FormData(); if (archivo) f.append('file', archivo); return f; })(),
+      });
+      let data = {};
+      try { data = await res.json(); } catch (err) { /* vacío */ }
+      if (!res.ok) throw new Error(data.detail || 'No se pudo subir el comprobante.');
+      toast('Comprobante enviado. Falta la verificación del negocio.');
+      await cargar();
+    } catch (err) { toast(err.message, true); }
+    finally { boton.disabled = false; }
+  });
+  cargar();
 })();

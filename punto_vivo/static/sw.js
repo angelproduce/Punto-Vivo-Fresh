@@ -1,5 +1,5 @@
 /* PUNTO VIVO FRESH · service worker para instalación como app */
-const CACHE = 'pvf-static-20261124a';
+const CACHE = 'pvf-static-20261124b';
 const ASSETS = [
   '/static/logo.png',
   '/static/css/styles.css',
@@ -41,5 +41,33 @@ self.addEventListener('fetch', (event) => {
       }
       return response;
     }))
+  );
+});
+
+// Notificación del navegador para el administrador: el servidor envía los datos.
+self.addEventListener('push', (event) => {
+  let datos = { title: 'PUNTO VIVO FRESH', body: 'Tienes un pedido nuevo.', url: '/admin' };
+  if (event.data) {
+    try { datos = { ...datos, ...event.data.json() }; }
+    catch (e) { datos.body = event.data.text(); }
+  }
+  event.waitUntil(
+    self.registration.showNotification(datos.title || 'PUNTO VIVO FRESH', {
+      body: datos.body || '',
+      tag: datos.tag || 'pvf-nuevo-pedido',
+      data: { url: datos.url || '/admin' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const destino = (event.notification.data && event.notification.data.url) || '/admin';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientes) => {
+      const abierto = clientes.find((c) => c.url.includes(destino));
+      if (abierto) return abierto.focus();
+      return self.clients.openWindow(destino);
+    })
   );
 });

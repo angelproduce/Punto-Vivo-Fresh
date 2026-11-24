@@ -11,6 +11,7 @@
     <div class="header-actions">
       <span class="visit-chip" id="visit-chip">🎟️ Visita registrada</span>
       <button class="btn btn-cart btn-sm" id="cart-button" type="button" title="Ver carrito">🛒 Carrito <span class="cart-count" id="cart-count" hidden>0</span></button>
+      <button class="btn btn-ghost btn-sm" id="mis-pedidos-button" type="button" title="Consultar el estado de mis pedidos">🧾 Mis pedidos</button>
       <button class="btn btn-ghost btn-sm" id="mode-toggle" type="button" aria-pressed="false" title="Cambiar entre modo móvil y escritorio">📱 Modo móvil</button>
       <button class="btn btn-ghost btn-sm" id="install-app" data-install-app type="button" hidden title="Instalar Punto Vivo Fresh en tu dispositivo">📲 Instalar app</button>
       <button class="btn btn-ghost btn-sm" id="share-menu" type="button">↗ Compartir menú</button>
@@ -95,12 +96,17 @@
     <div class="checkout-block">
       <label>Método de pago
         <select id="checkout-pago">
-          <option value="efectivo">Efectivo</option>
-          <option value="tarjeta">Tarjeta</option>
-          <option value="transferencia">Transferencia</option>
+          <option value="efectivo">Efectivo al recibir o retirar</option>
+          <option value="transferencia">Transferencia bancaria</option>
         </select>
       </label>
-      <p class="small-note">El pago quedará pendiente hasta que el negocio lo confirme en su panel.</p>
+      <p class="small-note">El pago quedará pendiente hasta que el negocio lo verifique en su panel.</p>
+      <div id="checkout-bancos" hidden>
+        <p class="bank-title">Datos para transferir</p>
+        <div id="checkout-cuentas"></div>
+        <p class="bank-total">Total a transferir: <strong id="checkout-transferir">RD$ 0.00</strong></p>
+        <p class="small-note">Después de confirmar el pedido podrás subir una foto o PDF de tu comprobante desde «Mis pedidos».</p>
+      </div>
     </div>
     <label class="checkout-notes">Observaciones generales<textarea id="checkout-notes" rows="3" maxlength="500" placeholder="Ej.: Sin tomate, poco picante…"></textarea></label>
     <div class="checkout-total"><span>Total del pedido</span><strong id="checkout-total">RD$ 0.00</strong></div>
@@ -118,8 +124,28 @@
     <p>Tu número de pedido es</p>
     <strong id="success-numero">—</strong>
     <p class="small-note" id="success-mensaje">Te esperamos.</p>
-    <button type="button" class="btn btn-primary" id="success-close">Listo</button>
+    <div id="success-proof" hidden>
+      <label class="proof-label">Sube tu comprobante (JPG, PNG o PDF · máx. 5 MB)
+        <input type="file" id="success-proof-file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+      </label>
+      <button type="button" class="btn btn-outline btn-sm" id="success-proof-subir">Enviar comprobante</button>
+      <p class="small-note" id="success-proof-estado"></p>
+    </div>
+    <div class="success-actions">
+      <button type="button" class="btn btn-outline" id="success-mis-pedidos">Ver mis pedidos</button>
+      <button type="button" class="btn btn-primary" id="success-close">Listo</button>
+    </div>
   </div>
+</dialog>
+
+<dialog id="mis-pedidos-dialog" class="dialog dialog-orders">
+  <button type="button" class="dialog-close" id="close-mis-pedidos" aria-label="Cerrar">✕</button>
+  <div class="dialog-head"><h3>Mis pedidos</h3></div>
+  <div class="dialog-body">
+    <p class="small-note">Aquí puedes ver el estado de tu pago. Subir el comprobante no confirma el pago: el negocio debe verificarlo.</p>
+    <div id="mis-pedidos-lista"></div>
+  </div>
+  <div class="dialog-foot"><button type="button" class="btn btn-outline" id="close-mis-pedidos-2">Cerrar</button></div>
 </dialog>
 
 <div class="toast" id="toast" role="status" hidden></div>

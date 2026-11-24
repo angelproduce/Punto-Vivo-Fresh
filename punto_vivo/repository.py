@@ -1008,9 +1008,13 @@ def delete_customer(customer_id: int) -> int | None:
 # ---------------------------------------------------------------- pedidos ---
 
 ESTADOS_PEDIDO = ('pendiente', 'aceptada', 'preparando', 'lista', 'entregada', 'rechazada', 'cancelada')
-METODOS_PAGO = ('efectivo', 'tarjeta', 'transferencia')
-ESTADOS_PAGO = ('pendiente', 'aprobado', 'rechazado', 'reembolsado')
+METODOS_PAGO = ('efectivo', 'transferencia')
+ESTADOS_PAGO = ('pendiente', 'comprobante_recibido', 'en_verificacion',
+                'aprobado', 'rechazado', 'reembolsado')
 ESTADOS_SIN_VENTA = ('rechazada', 'cancelada')
+ESTADOS_CON_COMPROBANTE = ('pendiente', 'comprobante_recibido', 'en_verificacion', 'rechazado')
+CAMPOS_CUENTA = ('bank_name', 'holder_name', 'account_number', 'account_type',
+                 'id_number', 'instructions', 'active', 'sort_order')
 
 
 def _money(value: Any) -> Decimal:
@@ -1032,7 +1036,8 @@ def customer_for_visit(visit_id: int) -> int | None:
 
 def create_order(visit_id: int, items: list[dict[str, Any]], idempotency_key: str,
                  delivery_method: str = 'retiro', address: dict[str, Any] | None = None,
-                 notes: str = '', payment_method: str = 'efectivo') -> dict[str, Any]:
+                 notes: str = '', payment_method: str = 'efectivo',
+                 bank_account_id: int | None = None) -> dict[str, Any]:
     """Crea pedido + artículos + pago de forma atómica con precios del servidor."""
     if not idempotency_key or len(idempotency_key) > 120:
         raise ValueError('Clave de pedido no válida.')
@@ -1040,6 +1045,16 @@ def create_order(visit_id: int, items: list[dict[str, Any]], idempotency_key: st
         raise ValueError('Modalidad de entrega no válida.')
     if payment_method not in METODOS_PAGO:
         raise ValueError('Método de pago no válido.')
+    if bank_account_id is not None:
+        try:
+            bank_account_id = int(bank_account_id)
+        except (TypeError, ValueError):
+            raise ValueError('Cuenta bancaria no válida.')
+    if payment_method == 'transferencia':
+        if get_active_payment_account(bank_account_id) is None:
+            raise ValueError('Selecciona una cuenta bancaria disponible.')
+    else:
+        bank_account_id = None
     if not isinstance(items, list) or not 1 <= len(items) <= 50:
         raise ValueError('El pedido debe tener entre 1 y 50 artículos.')
 
@@ -1089,6 +1104,7 @@ def create_order(visit_id: int, items: list[dict[str, Any]], idempotency_key: st
             'p_address': direccion,
             'p_notes': nota_general,
             'p_payment_method': payment_method,
+            'p_bank_account_id': bank_account_id,
         })
 
     import sqlite3
@@ -1121,11 +1137,12 @@ def create_order(visit_id: int, items: list[dict[str, Any]], idempotency_key: st
             """INSERT INTO orders(customer_id, visit_id, delivery_address_id, order_number,
                                   status, delivery_method, customer_name_snapshot,
                                   customer_phone_snapshot, notes, subtotal, discount,
-                                  delivery_fee, total, idempotency_key, created_at, updated_at)
-               VALUES(?,?,?,?,'pendiente',?,?,?,?,0,0,0,0,?,?,?)""",
+                                  delivery_fee, total, idempotency_key, bank_account_id,
+                                  created_at, updated_at)
+               VALUES(?,?,?,?,'pendiente',?,?,?,?,0,0,0,0,?,?,?,?)""",
             (cliente_id, visit_id, direccion_id, 'TEMP-' + idempotency_key,
              delivery_method, cliente['full_name'], cliente['phone'], nota_general,
-             idempotency_key, ahora, ahora),
+             idempotency_key, bank_account_id, ahora, ahora),
         )
         orden_id = cursor.lastrowid
         subtotal = Decimal('0.00')
@@ -1189,6 +1206,7 @@ def _order_dict(row: dict[str, Any]) -> dict[str, Any]:
         'total': _importe(row.get('total')),
         'creado': row.get('created_at', ''),
         'actualizado': row.get('updated_at', ''),
+        'banco_id': int(row['bank_account_id']) if row.get('bank_account_id') else None,
     }
 
 
@@ -1217,10 +1235,15 @@ def _order_rows(filters: dict[str, str] | None = None, limit: int = 100) -> list
         params_sql.append(limite)
         rows = [_order_dict(dict(r)) for r in db.all_rows(sql, tuple(params_sql))]
 
+    proofs = list_payment_proofs()
+    bancos = {c['id']: c['banco'] for c in list_payment_accounts()}
     for row in rows:
         pago_row = pagos.get(row['id'])
         row['pago_estado'] = pago_row['status'] if pago_row else 'pendiente'
         row['metodo_pago'] = pago_row['method'] if pago_row else ''
+        row['pago_nota'] = (pago_row or {}).get('review_note', '') or ''
+        row['banco'] = bancos.get(row.get('banco_id'), '')
+        row['comprobante_enviado'] = proofs.get(row['id'], {}).get('enviado', '')
 
     return [r for r in rows
             if (not pago or r['pago_estado'] == pago)
@@ -1276,7 +1299,19 @@ def get_order(order_id: int) -> dict[str, Any] | None:
         'metodo': pago['method'], 'estado': pago['status'],
         'monto': _importe(pago['amount']), 'referencia': pago.get('provider_payment_id', ''),
         'pagado_en': pago.get('paid_at'),
+        'nota': pago.get('review_note', '') or '',
+        'revisado_en': pago.get('reviewed_at'),
+        'confirmado_por': pago.get('confirmed_by'),
     }
+    proof = get_payment_proof(order_id)
+    data['comprobante'] = None if proof is None else {
+        'nombre': proof['nombre'], 'enviado': proof['enviado'], 'tamano': proof['tamano'],
+    }
+    cuenta = get_active_payment_account(row.get('bank_account_id'))
+    if cuenta is None and supabase_enabled():
+        cuenta = next((c for c in list_payment_accounts()
+                       if c['id'] == (row.get('bank_account_id') or -1)), None)
+    data['banco'] = cuenta['banco'] if cuenta else ''
     data['direccion'] = None if direccion is None else {
         'linea1': direccion.get('address_line1', ''),
         'linea2': direccion.get('address_line2', ''),
@@ -1334,10 +1369,20 @@ def customer_orders(customer_id: int) -> list[dict[str, Any]]:
         rows = _rows('orders', {
             'customer_id': f'eq.{customer_id}', 'order': 'created_at.desc', 'limit': 1000,
         })
-        return [_order_dict(r) for r in rows]
-    return [_order_dict(dict(r)) for r in db.all_rows(
-        'SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC', (customer_id,)
-    )]
+        pedidos = [_order_dict(r) for r in rows]
+    else:
+        pedidos = [_order_dict(dict(r)) for r in db.all_rows(
+            'SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC', (customer_id,)
+        )]
+    pagos = _payment_rows()
+    bancos = {c['id']: c['banco'] for c in list_payment_accounts()}
+    for pedido in pedidos:
+        pago = pagos.get(pedido['id'], {})
+        pedido['pago_estado'] = pago.get('status', 'pendiente')
+        pedido['metodo_pago'] = pago.get('method', '')
+        pedido['pago_nota'] = pago.get('review_note', '') or ''
+        pedido['banco'] = bancos.get(pedido.get('banco_id'), '')
+    return pedidos
 
 
 def count_customer_orders(customer_id: int) -> int:
@@ -1350,6 +1395,238 @@ def count_product_orders(product_id: int) -> int:
     if supabase_enabled():
         return len(_rows('order_items', {'select': 'id', 'product_id': f'eq.{product_id}', 'limit': 1000}))
     return int(_scalar('SELECT COUNT(*) FROM order_items WHERE product_id = ?', (product_id,)))
+
+
+# ------------------------------------------------------- cuentas bancarias ---
+
+def _cuenta_dict(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        'id': int(row['id']),
+        'banco': row.get('bank_name', ''),
+        'titular': row.get('holder_name', '') or '',
+        'numero': row.get('account_number', '') or '',
+        'tipo': row.get('account_type', '') or '',
+        'identificacion': row.get('id_number', '') or '',
+        'instrucciones': row.get('instructions', '') or '',
+        'activa': int(row.get('active', 0)),
+        'orden': int(row.get('sort_order', 0) or 0),
+    }
+
+
+def _limpiar_cuenta(payload: dict[str, Any]) -> dict[str, Any]:
+    banco = str(payload.get('banco') or payload.get('bank_name') or '').strip()[:80]
+    if not banco:
+        raise ValueError('Escribe el nombre del banco.')
+    return {
+        'bank_name': banco,
+        'holder_name': str(payload.get('titular') or payload.get('holder_name') or '').strip()[:120],
+        'account_number': str(payload.get('numero') or payload.get('account_number') or '').strip()[:40],
+        'account_type': str(payload.get('tipo') or payload.get('account_type') or '').strip()[:40],
+        'id_number': str(payload.get('identificacion') or payload.get('id_number') or '').strip()[:40],
+        'instructions': str(payload.get('instrucciones') or payload.get('instructions') or '').strip()[:500],
+        'active': 1 if payload.get('activa', payload.get('active', False)) else 0,
+        'sort_order': max(-99, min(99, int(payload.get('orden', payload.get('sort_order', 0)) or 0))),
+    }
+
+
+def list_payment_accounts() -> list[dict[str, Any]]:
+    if supabase_enabled():
+        rows = _rows('payment_accounts', {'order': 'sort_order.asc,id.asc', 'limit': 200})
+    else:
+        rows = _local_all('SELECT * FROM payment_accounts ORDER BY sort_order, id')
+    return [_cuenta_dict(r) for r in rows]
+
+
+def public_payment_accounts() -> list[dict[str, Any]]:
+    """Solo cuentas activas y completas: el cliente nunca ve borradores."""
+    return [c for c in list_payment_accounts()
+            if c['activa'] and c['titular'] and c['numero']]
+
+
+def get_active_payment_account(account_id: Any) -> dict[str, Any] | None:
+    if account_id is None:
+        return None
+    try:
+        account_id = int(account_id)
+    except (TypeError, ValueError):
+        return None
+    for cuenta in public_payment_accounts():
+        if cuenta['id'] == account_id:
+            return cuenta
+    return None
+
+
+def create_payment_account(payload: dict[str, Any]) -> dict[str, Any]:
+    datos = _limpiar_cuenta(payload)
+    ahora = now_local().isoformat(timespec='seconds')
+    datos['created_at'] = ahora
+    datos['updated_at'] = ahora
+    if supabase_enabled():
+        return _cuenta_dict(_insert('payment_accounts', datos))
+    conn = db.connect()
+    try:
+        cols = ','.join(datos)
+        marks = ','.join('?' for _ in datos)
+        cursor = conn.execute(f'INSERT INTO payment_accounts({cols}) VALUES({marks})', tuple(datos.values()))
+        return _cuenta_dict(dict(db.one('SELECT * FROM payment_accounts WHERE id=?', (cursor.lastrowid,))))
+    finally:
+        conn.close()
+
+
+def update_payment_account(account_id: int, payload: dict[str, Any]) -> dict[str, Any] | None:
+    datos = _limpiar_cuenta(payload)
+    datos['updated_at'] = now_local().isoformat(timespec='seconds')
+    if supabase_enabled():
+        if _row('payment_accounts', {'id': f'eq.{account_id}', 'select': 'id'}) is None:
+            return None
+        _update('payment_accounts', account_id, datos)
+    else:
+        actual = db.one('SELECT id FROM payment_accounts WHERE id=?', (account_id,))
+        if actual is None:
+            return None
+        asignaciones = ','.join(f'{k}=?' for k in datos)
+        db.execute(f'UPDATE payment_accounts SET {asignaciones} WHERE id=?', (*datos.values(), account_id))
+    fila = _row('payment_accounts', {'id': f'eq.{account_id}'}) if supabase_enabled() else db.one(
+        'SELECT * FROM payment_accounts WHERE id=?', (account_id,))
+    return _cuenta_dict(dict(fila)) if fila else None
+
+
+def delete_payment_account(account_id: int) -> bool:
+    if supabase_enabled():
+        if _row('payment_accounts', {'id': f'eq.{account_id}', 'select': 'id'}) is None:
+            return False
+        _delete('payment_accounts', account_id)
+        return True
+    borrados = db.execute('DELETE FROM payment_accounts WHERE id=?', (account_id,))
+    return bool(borrados)
+
+
+# ------------------------------------------------------------ comprobantes ---
+
+def _proof_dict(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        'id': int(row['id']), 'pedido_id': int(row['order_id']),
+        'cliente_id': int(row['customer_id']) if row.get('customer_id') else None,
+        'cuenta_id': int(row['bank_account_id']) if row.get('bank_account_id') else None,
+        'nombre': row.get('file_name', ''), 'ruta': row.get('file_path', ''),
+        'tipo': row.get('content_type', ''), 'tamano': int(row.get('size_bytes', 0) or 0),
+        'enviado': row.get('uploaded_at', ''),
+    }
+
+
+def get_payment_proof(order_id: int) -> dict[str, Any] | None:
+    if supabase_enabled():
+        row = _row('payment_proofs', {'order_id': f'eq.{order_id}', 'limit': 1})
+    else:
+        row = db.one('SELECT * FROM payment_proofs WHERE order_id=?', (order_id,))
+    return _proof_dict(dict(row)) if row else None
+
+
+def list_payment_proofs() -> dict[int, dict[str, Any]]:
+    if supabase_enabled():
+        rows = _rows('payment_proofs', {'limit': 1000})
+    else:
+        rows = _local_all('SELECT * FROM payment_proofs')
+    return {int(r['order_id']): _proof_dict(r) for r in rows}
+
+
+def save_payment_proof(order_id: int, customer_id: int, bank_account_id: int | None,
+                       nombre: str, ruta: str, content_type: str, size: int) -> dict[str, Any]:
+    """Un comprobante por pedido; reemplazar el anterior no cambia el estado del pago."""
+    ahora = now_local().isoformat(timespec='seconds')
+    datos = {
+        'order_id': order_id, 'customer_id': customer_id, 'bank_account_id': bank_account_id,
+        'file_name': nombre[:120], 'file_path': ruta, 'content_type': content_type,
+        'size_bytes': int(size), 'uploaded_at': ahora,
+    }
+    anterior = get_payment_proof(order_id)
+    if supabase_enabled():
+        if anterior:
+            _update('payment_proofs', anterior['id'], datos)
+            return get_payment_proof(order_id)
+        return _proof_dict(_insert('payment_proofs', datos))
+    conn = db.connect()
+    try:
+        conn.execute('BEGIN IMMEDIATE')
+        if anterior:
+            columnas = ','.join(f'{k}=?' for k in datos)
+            conn.execute(f'UPDATE payment_proofs SET {columnas} WHERE id=?', (*datos.values(), anterior['id']))
+        else:
+            columnas = ','.join(datos)
+            marks = ','.join('?' for _ in datos)
+            conn.execute(f'INSERT INTO payment_proofs({columnas}) VALUES({marks})', tuple(datos.values()))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return get_payment_proof(order_id)
+
+
+def delete_payment_proof(proof_id: int) -> None:
+    if supabase_enabled():
+        _delete('payment_proofs', proof_id)
+    else:
+        db.execute('DELETE FROM payment_proofs WHERE id=?', (proof_id,))
+
+
+# ----------------------------------------------------------- notificaciones --
+
+def listar_suscripciones_push() -> list[dict[str, Any]]:
+    if supabase_enabled():
+        return _rows('admin_push_subscriptions', {'limit': 500})
+    return _local_all('SELECT * FROM admin_push_subscriptions')
+
+
+def add_push_subscription(admin_id: int, endpoint: str, p256dh: str, auth: str) -> dict[str, Any]:
+    datos = {'admin_id': admin_id, 'endpoint': endpoint, 'p256dh': p256dh, 'auth': auth,
+             'created_at': now_local().isoformat(timespec='seconds')}
+    if supabase_enabled():
+        anterior = _row('admin_push_subscriptions', {'endpoint': f'eq.{endpoint}'})
+        if anterior:
+            _update('admin_push_subscriptions', anterior['id'],
+                    {'admin_id': admin_id, 'p256dh': p256dh, 'auth': auth})
+            return dict(anterior)
+        return _insert('admin_push_subscriptions', datos)
+    conn = db.connect()
+    try:
+        anterior = db.one('SELECT id FROM admin_push_subscriptions WHERE endpoint=?', (endpoint,))
+        if anterior:
+            db.execute('UPDATE admin_push_subscriptions SET admin_id=?, p256dh=?, auth=? WHERE id=?',
+                       (admin_id, p256dh, auth, anterior['id']))
+        else:
+            db.execute('INSERT INTO admin_push_subscriptions(admin_id, endpoint, p256dh, auth, created_at) '
+                       'VALUES(?,?,?,?,?)', (admin_id, endpoint, p256dh, auth, datos['created_at']))
+    finally:
+        conn.close()
+    return datos
+
+
+def remove_push_subscription(endpoint: str) -> int:
+    if supabase_enabled():
+        anterior = _row('admin_push_subscriptions', {'endpoint': f'eq.{endpoint}', 'select': 'id'})
+        if anterior is None:
+            return 0
+        _delete('admin_push_subscriptions', anterior['id'])
+        return 1
+    return db.execute('DELETE FROM admin_push_subscriptions WHERE endpoint=?', (endpoint,))
+
+
+def marcar_suscripcion_push(subscription_id: int) -> None:
+    ahora = now_local().isoformat(timespec='seconds')
+    if supabase_enabled():
+        _update('admin_push_subscriptions', subscription_id, {'last_used_at': ahora})
+    else:
+        db.execute('UPDATE admin_push_subscriptions SET last_used_at=? WHERE id=?',
+                   (ahora, subscription_id))
+
+
+def borrar_suscripcion_push(subscription_id: int) -> None:
+    if supabase_enabled():
+        _delete('admin_push_subscriptions', subscription_id)
+    else:
+        db.execute('DELETE FROM admin_push_subscriptions WHERE id=?', (subscription_id,))
 
 
 def _payment_rows() -> dict[int, dict[str, Any]]:
@@ -1518,36 +1795,37 @@ def frequent_customers(limit: int = 6) -> list[dict[str, Any]]:
     return sorted(resumen.values(), key=lambda x: (-x['total'], -x['pedidos']))[:limit]
 
 
-def _set_payment(order_id: int, status: str, referencia: str = '') -> None:
+def _set_payment(order_id: int, status: str, referencia: str = '',
+                 admin_id: int | None = None, nota: str = '') -> None:
+    """Cambia el estado del pago y deja auditoría de quién lo revisó/confirmó."""
     ahora = now_local().isoformat(timespec='seconds')
+    cambios: dict[str, Any] = {'status': status}
+    if status == 'aprobado':
+        cambios['paid_at'] = ahora
+        if referencia:
+            cambios['provider'] = 'administrador'
+            cambios['provider_payment_id'] = referencia[:120]
+        if admin_id:
+            cambios['confirmed_by'] = int(admin_id)
+            cambios['confirmed_at'] = ahora
+    elif status == 'pendiente':
+        cambios['paid_at'] = None
+    if status in ('comprobante_recibido', 'en_verificacion', 'rechazado'):
+        if admin_id:
+            cambios['reviewed_by'] = int(admin_id)
+        cambios['reviewed_at'] = ahora
+        cambios['review_note'] = str(nota or '').strip()[:500]
     if supabase_enabled():
         pago = _row('payments', {'order_id': f'eq.{order_id}', 'limit': 1})
         if pago is None:
             return
-        payload: dict[str, Any] = {'status': status}
-        if status == 'aprobado':
-            payload['paid_at'] = ahora
-            if referencia:
-                payload['provider'] = 'administrador'
-                payload['provider_payment_id'] = referencia[:120]
-        elif status == 'pendiente':
-            payload['paid_at'] = None
-        _update('payments', int(pago['id']), payload)
+        _update('payments', int(pago['id']), cambios)
     else:
         pago = db.one('SELECT id FROM payments WHERE order_id = ? ORDER BY id LIMIT 1', (order_id,))
         if pago is None:
             return
-        if status == 'aprobado':
-            db.execute(
-                """UPDATE payments SET status=?, paid_at=?, provider='administrador',
-                                       provider_payment_id=? WHERE id=?""",
-                (status, ahora, referencia[:120], pago['id']),
-            )
-        else:
-            db.execute(
-                'UPDATE payments SET status=?, paid_at=? WHERE id=?',
-                (status, None if status == 'pendiente' else ahora, pago['id']),
-            )
+        asignaciones = ','.join(f'{k}=?' for k in cambios)
+        db.execute(f'UPDATE payments SET {asignaciones} WHERE id=?', (*cambios.values(), pago['id']))
 
 
 def update_order_status(order_id: int, accion: str, referencia: str = '') -> dict[str, Any] | None:
@@ -1574,20 +1852,70 @@ def update_order_status(order_id: int, accion: str, referencia: str = '') -> dic
     return get_order(order_id)
 
 
-def set_order_paid(order_id: int, pagado: bool, referencia: str = '') -> dict[str, Any] | None:
+def set_order_paid(order_id: int, pagado: bool, referencia: str = '',
+                   admin_id: int | None = None) -> dict[str, Any] | None:
     """Solo el administrador puede confirmar un pago; el cliente nunca llega aquí."""
     pedido = get_order(order_id)
     if pedido is None:
         return None
     if pedido['estado'] in ('rechazada', 'cancelada'):
         raise ValueError('No se puede marcar como pagado un pedido rechazado o cancelado.')
-    if pedido['pago'] and pedido['pago']['estado'] == 'reembolsado':
+    estado = (pedido['pago'] or {}).get('estado')
+    if estado == 'reembolsado':
         raise ValueError('Ese pago fue reembolsado.')
-    ahora = now_local().isoformat(timespec='seconds')
-    _set_payment(order_id, 'aprobado' if pagado else 'pendiente', referencia)
+    if pagado and estado == 'aprobado':
+        raise ValueError('Este pago ya fue confirmado.')
+    _set_payment(order_id, 'aprobado' if pagado else 'pendiente', referencia, admin_id)
+    actualizar = now_local().isoformat(timespec='seconds')
     if supabase_enabled():
-        _update('orders', order_id, {'updated_at': ahora})
+        _update('orders', order_id, {'updated_at': actualizar})
     else:
-        db.execute('UPDATE orders SET updated_at=? WHERE id=?', (ahora, order_id))
+        db.execute('UPDATE orders SET updated_at=? WHERE id=?', (actualizar, order_id))
+    return get_order(order_id)
+
+
+def mark_proof_received(order_id: int) -> dict[str, Any] | None:
+    """Subir una imagen nunca confirma el pago: solo pasa a «comprobante recibido»."""
+    pedido = get_order(order_id)
+    if pedido is None:
+        return None
+    if pedido['estado'] in ESTADOS_SIN_VENTA:
+        raise ValueError('Ese pedido ya está cerrado.')
+    estado = (pedido['pago'] or {}).get('estado', 'pendiente')
+    if estado not in ESTADOS_CON_COMPROBANTE:
+        raise ValueError('Ese pago ya fue confirmado o no admite comprobante.')
+    _set_payment(order_id, 'comprobante_recibido')
+    actualizar = now_local().isoformat(timespec='seconds')
+    if supabase_enabled():
+        _update('orders', order_id, {'updated_at': actualizar})
+    else:
+        db.execute('UPDATE orders SET updated_at=? WHERE id=?', (actualizar, order_id))
+    return get_order(order_id)
+
+
+def review_payment(order_id: int, decision: str, admin_id: int, nota: str = '',
+                   referencia: str = '') -> dict[str, Any] | None:
+    """El administrador verifica el dinero antes de aprobar una transferencia."""
+    if decision not in ('en_verificacion', 'aprobado', 'rechazado'):
+        raise ValueError('Decisión de pago no válida.')
+    pedido = get_order(order_id)
+    if pedido is None:
+        return None
+    if pedido['estado'] in ESTADOS_SIN_VENTA:
+        raise ValueError('Ese pedido ya está cerrado.')
+    pago = pedido['pago'] or {}
+    if pago.get('estado') == 'reembolsado':
+        raise ValueError('Ese pago fue reembolsado.')
+    if decision == 'aprobado' and pago.get('estado') == 'aprobado':
+        raise ValueError('Este pago ya fue confirmado.')
+    if pago.get('metodo') == 'transferencia' and decision in ('en_verificacion', 'aprobado'):
+        if get_payment_proof(order_id) is None:
+            raise ValueError('El cliente aún no envió el comprobante.')
+    _set_payment(order_id, decision, referencia, admin_id, nota)
+    actualizar = now_local().isoformat(timespec='seconds')
+    if supabase_enabled():
+        _update('orders', order_id, {'updated_at': actualizar})
+    else:
+        db.execute('UPDATE orders SET updated_at=? WHERE id=?', (actualizar, order_id))
     return get_order(order_id)
 

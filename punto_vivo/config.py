@@ -5,6 +5,7 @@ Las credenciales nunca se envían al navegador.
 """
 from __future__ import annotations
 
+import json
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -17,6 +18,7 @@ load_dotenv(ROOT / ".env", override=False)
 
 STATE_DIR = ROOT / "state"
 UPLOAD_DIR = Path(__file__).resolve().parent / "static" / "uploads"
+PROOF_DIR = STATE_DIR / "comprobantes"  # privado: nunca se sirve desde /static
 DB_PATH = Path(os.getenv("PV_DB_PATH", str(STATE_DIR / "punto_vivo.sqlite3")))
 SECRET_FILE = STATE_DIR / "punto_vivo_secret.key"
 
@@ -51,8 +53,27 @@ CSRF_HEADER = "X-CSRF-Token"
 
 # Vercel limita el cuerpo de petición a 4.5 MB; en producción se usa 4 MB.
 MAX_IMAGE_BYTES = int(os.getenv("PV_MAX_IMAGE_BYTES", str(8 * 1024 * 1024)))
+MAX_PROOF_BYTES = int(os.getenv("PV_MAX_PROOF_BYTES", str(5 * 1024 * 1024)))
+# Web Push: la clave pública puede enviarse al navegador; la privada nunca.
+VAPID_PUBLIC_KEY = os.getenv("PV_VAPID_PUBLIC_KEY", "").strip()
+VAPID_PRIVATE_KEY = os.getenv("PV_VAPID_PRIVATE_KEY", "").strip()
+VAPID_SUBJECT = os.getenv("PV_VAPID_SUBJECT", "https://punto-vivo-fresh.vercel.app").strip()
+VAPID_FILE = STATE_DIR / "vapid.json"  # local, ignorado por git; en Vercel se usan variables
 MAX_VISITAS_HORA_IP = int(os.getenv("PV_LIMITE_IP_HORA", "20"))
 MAX_VISITAS_HORA_TEL = int(os.getenv("PV_LIMITE_TELEFONO_HORA", "6"))
+
+
+def vapid_keys() -> tuple[str, str]:
+    """Par (pública, privada): entorno primero, archivo local como respaldo."""
+    publica, privada = VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+    if not (publica and privada) and VAPID_FILE.exists():
+        try:
+            datos = json.loads(VAPID_FILE.read_text(encoding="utf-8"))
+            publica = publica or str(datos.get("public", "")).strip()
+            privada = privada or str(datos.get("private", "")).strip()
+        except Exception:
+            pass
+    return publica, privada
 
 
 def public_base_url(request=None) -> str:

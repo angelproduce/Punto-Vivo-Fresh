@@ -627,3 +627,51 @@ body.pv-mobile .cobro-row strong{text-align:left}
 @media(max-width:360px){
   body.pv-mobile .admin-nav .nav-item::after{font-size:8px}
 }
+
+/* ------------------------------------------------ transferencias y comprobantes */
+.bank-title{margin:12px 0 8px;font-size:12px;font-weight:850;color:var(--verde-oscuro)}
+.bank-option{display:flex;gap:9px;align-items:flex-start;padding:10px 11px;border:1px solid var(--linea);border-radius:11px;margin-bottom:7px;cursor:pointer}
+.bank-option:has(input:checked){border-color:var(--verde);background:var(--verde-claro)}
+.bank-option input{margin-top:3px;accent-color:var(--verde)}
+.bank-option span{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.bank-option strong{font-size:13px}
+.bank-option small{font-size:11px;color:var(--muted)}
+.bank-total{display:flex;justify-content:space-between;gap:10px;margin:10px 0 4px;padding:9px 11px;border-radius:10px;background:var(--amarillo-claro);font-size:12px}
+.bank-total strong{color:var(--verde-oscuro);font-size:15px}
+.proof-label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:750;color:var(--texto);margin:10px 0}
+.proof-label input{width:100%;min-height:40px;border:1px solid var(--linea);border-radius:9px;padding:7px;font:inherit;font-size:12px}
+.success-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:14px}
+.dialog-orders{width:min(94vw,620px)}
+.order-card{border:1px solid var(--linea);border-radius:13px;padding:12px;margin-bottom:10px;background:#fff}
+.order-card-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}
+.order-card-head strong{font-size:14px;color:var(--verde-oscuro)}
+.order-card-head small{font-size:10px;color:var(--muted)}
+.order-card-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:12px;border-bottom:1px solid var(--linea)}
+.order-card-row:last-of-type{border-bottom:0}
+.order-card-row>span:first-child{color:var(--muted)}
+.pay-badge,.badge-comprobante_recibido,.badge-en_verificacion{display:inline-block;padding:4px 9px;border-radius:999px;font-size:10px;font-weight:850;background:#fff4d6;color:#7a5a00}
+.pay-aprobado{background:#def4e5;color:#1d6b43}
+.pay-pendiente{background:#f1f3f5;color:#52606d}
+.pay-rechazado,.pay-reembolsado{background:#fde5e5;color:#a32828}
+.badge-comprobante_recibido,.badge-en_verificacion{background:#fff4d6;color:#7a5a00}
+.pay-badge.pay-aprobado{background:#def4e5;color:#1d6b43}
+.pay-badge.pay-rechazado,.pay-badge.pay-reembolsado{background:#fde5e5;color:#a32828}
+.proof-preview{max-width:100%;max-height:320px;border:1px solid var(--linea);border-radius:11px;display:block;margin:10px 0}
+#cuentas-body td{overflow-wrap:anywhere}
+
+/* Detalle de producto compacto en móvil: imagen grande, texto sin espacios de más. */
+body.pv-mobile dialog.dialog-product{max-height:90dvh}
+body.pv-mobile .product-detail-img{height:min(44vw,200px);min-height:150px}
+body.pv-mobile .product-detail-img img{object-fit:cover;object-position:center}
+body.pv-mobile .product-detail-content{padding:12px 14px 16px}
+body.pv-mobile .product-detail-content h2{font-size:19px;margin:2px 0}
+body.pv-mobile .product-detail-content .price{display:inline-block;font-size:18px;margin:6px 0}
+body.pv-mobile .product-detail-content p{font-size:12px;line-height:1.35;margin:7px 0}
+body.pv-mobile .detail-order{gap:8px;margin:10px 0}
+body.pv-mobile .detail-order input{min-height:38px}
+body.pv-mobile .detail-order .btn{min-height:42px}
+body.pv-mobile #share-product{min-height:36px;font-size:11px}
+
+/* Once secciones en la barra inferior del panel (la regla de seis se conserva). */
+body.pv-mobile .admin-nav{grid-template-columns:repeat(11,minmax(0,1fr))}
+body.pv-mobile .admin-nav .nav-item::after{font-size:8px}

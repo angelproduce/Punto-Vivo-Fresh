@@ -79,6 +79,8 @@ Copia `.env.example` a `.env` (si aún no lo hiciste) y revisa las variables `PV
 | `PV_SUPABASE_BUCKET` | Bucket público de fotos (`menu-images` por defecto). |
 | `PV_TRUST_PROXY` | Poner `1` detrás de Vercel/Render/proxy HTTPS para respetar `X-Forwarded-*` en cookies y origen. |
 | `PV_MAX_IMAGE_BYTES` | Tamaño máximo de foto (8 MB local). En Vercel usar `4194304` por el límite de 4.5 MB por petición. |
+| `PV_MAX_PROOF_BYTES` | Tamaño máximo del comprobante de transferencia (`5242880` = 5 MB). |
+| `PV_VAPID_PUBLIC_KEY` / `PV_VAPID_PRIVATE_KEY` / `PV_VAPID_SUBJECT` | Par VAPID para notificaciones del navegador al admin. Opcionales: en local se usa `state/vapid.json` como respaldo; la privada nunca se envía al navegador. |
 
 Para publicarlo en Internet, sigue [**la guía de Render + Supabase**](DEPLOY_RENDER.md) en lugar de montar un reverse proxy a mano: el disco de Render es efímero, así que base de datos y fotos deben vivir en Supabase. El panel usa cookies `HttpOnly`, `SameSite=Lax` y token CSRF.
 
@@ -109,7 +111,7 @@ Reglas importantes:
 ## 4. Menú, carrito y panel administrativo
 
 - **Público:** búsqueda y filtros por categoría siempre visibles (todas las categorías se muestran en filas, sin deslizar), tarjetas compactas con el precio sobre los botones «Ver detalle» y «🛒 Agregar», ficha de producto, botón compartir, carrito persistente con cantidades y observaciones por producto, checkout con entrega/retiro, dirección, método de pago y observaciones generales, confirmación con número de pedido y aviso de datos de demostración.
-- **Panel:** resumen con KPIs de visitas **y ventas**, gestión de pedidos (filtrar, ver detalle, aceptar, preparar, marcar listo/entregado, rechazar o cancelar, confirmar pago, exportar CSV), sección **Ventas** (ingresos de 7 días, situación de cobros, productos más vendidos, ingresos por categoría e historial con botón **Borrar venta** que pide la contraseña del administrador sesionado), sección **Clientes frecuentes** (compras pagadas, total y promedio), perfil del cliente (visitas, pedidos, gasto y favoritos), notificación de pedidos nuevos, top de clientes, gestión de visitas, exportaciones CSV, CRUD de productos y categorías, activación/desactivación, orden y subida de fotos (redimensionadas a WebP). Las eliminaciones piden confirmación y no se pueden deshacer.
+- **Panel:** resumen con KPIs de visitas **y ventas**, gestión de pedidos (filtrar, ver detalle, aceptar, preparar, marcar listo/entregado, rechazar o cancelar, confirmar pago, exportar CSV), secciones **Pagos** (transferencias, comprobantes y revisión con nota) y **CONFIGURACIÓN DE PAGOS** (cuentas bancarias y notificaciones), sección **Ventas** (ingresos de 7 días, situación de cobros, productos más vendidos, ingresos por categoría e historial con botón **Borrar venta** que pide la contraseña del administrador sesionado), sección **Clientes frecuentes** (compras pagadas, total y promedio), perfil del cliente (visitas, pedidos, gasto y favoritos), notificación de pedidos nuevos, top de clientes, gestión de visitas, exportaciones CSV, CRUD de productos y categorías, activación/desactivación, orden y subida de fotos (redimensionadas a WebP). Las eliminaciones piden confirmación y no se pueden deshacer.
 - **QR:** descarga PNG y SVG del mismo enlace permanente al formulario de registro.
 
 Los productos iniciales son **12 ejemplos marcados como DEMO** con precio `0 = "Precio por definir"`. No son datos comerciales reales: reemplázalos desde *Administrar menú* y asigna precios reales. Los productos sin precio **no se pueden agregar al carrito** ni pedir. Las fotos de demostración se cargan desde Unsplash; si no hay internet, la interfaz muestra un ilustrador de respaldo por categoría. Puedes subir tus propias fotos desde el panel (se guardan optimizadas en `static/uploads/`).
@@ -120,14 +122,18 @@ Los cambios en productos/categorías se reflejan al recargar el menú público (
 
 ## 5. Pedidos, cobros y ventas
 
-- El cliente elige el método de pago, pero **no puede marcarlo como pagado**: queda `pendiente` hasta que el administrador confirme el cobro en el panel.
+- El cliente elige entre **efectivo** y **transferencia bancaria**; «tarjeta» ya no está disponible. **No puede marcarlo como pagado**: el pago queda `pendiente` hasta que el administrador verifique y confirme el cobro en el panel.
+- Para transferir, el negocio configura sus cuentas en **CONFIGURACIÓN DE PAGOS**. Los borradores iniciales (Banco Popular, BHD y Banreservas) no tienen titular ni número inventados: solo se muestran al cliente cuando están completos y activos.
+- El cliente puede subir un comprobante JPG/JPEG/PNG/PDF de hasta **5 MB** justo al confirmar el pedido o después desde **🧾 Mis pedidos**. El archivo se guarda en almacenamiento privado (`state/comprobantes/` en local, bucket privado `comprobantes` en Supabase) y solo lo lee el administrador mediante una URL firmada o la API.
+- **Subir una imagen nunca confirma el pago**: pasa a `comprobante_recibido`. El administrador puede ponerlo `en_verificacion`, `aprobado` o `rechazado`, siempre con sesión y CSRF. Se guarda quién confirmó (`confirmed_by`) y cuándo (`confirmed_at`), y la doble confirmación se bloquea.
 - Una venta definitiva es un pedido con pago `aprobado` y estado distinto de `rechazada`/`cancelada`. Si se rechaza o cancela un pedido ya pagado, el pago pasa a `reembolsado` y deja de contar.
 - El resumen muestra por separado pedidos nuevos, pendientes de pago, ventas del día/semana/mes y monto pendiente.
 - El mismo pedido se contabiliza **una sola vez**; los pedidos pendientes, rechazados y cancelados nunca suman ingresos.
-- `discount` y `delivery_fee` existen en la base con valor `0` por defecto; no se aplican cargos automáticos.
+- `discount` y `delivery_fee` existen en la base con valor `0` por defecto; no se aplican cargos automáticos. El total siempre lo calcula el servidor con precios propios; el navegador no puede modificarlo.
 - Los estados de pedido son `pendiente`, `aceptada`, `preparando`, `lista`, `entregada`, `rechazada` y `cancelada`.
-- Los estados de pago son `pendiente`, `aprobado`, `rechazado` y `reembolsado`.
-- Los clientes ven **solo sus pedidos** desde su cookie firmada; no existe una ruta pública para consultar pedidos por ID ajeno.
+- Los estados de pago son `pendiente`, `comprobante_recibido`, `en_verificacion`, `aprobado`, `rechazado` y `reembolsado`. Solo `aprobado` cuenta como venta.
+- Los clientes ven **solo sus pedidos** desde su cookie firmada; no existe una ruta pública para consultar pedidos por ID ajeno. En «Mis pedidos» ven el estado del pago y la nota de la revisión, sin correos externos.
+- El panel avisa de pedidos nuevos con el aviso interno y, si se activa el permiso y hay claves VAPID, con una **notificación del navegador**. El aviso es un extra: un fallo de notificación nunca invalida un pedido.
 - No se puede eliminar un cliente ni un producto que aparece en pedidos (la API devuelve `409`).
 - **Borrar una venta:** en el historial de **Ventas**, el botón 🗑 pide la contraseña del administrador y elimina el pedido completo (pedido, artículos y pago). Sin la contraseña correcta no se borra nada; la petición requiere sesión admin y CSRF. Al borrarse, el pedido desaparece de Pedidos y Ventas y el resumen se recalcula. La contraseña nunca se envía por chat ni se guarda en el navegador.
 
@@ -139,15 +145,17 @@ Persistencia local: **SQLite con WAL** en `state/punto_vivo.sqlite3`, con claves
 
 Se incluye además [`database/supabase_schema.sql`](database/supabase_schema.sql) con:
 
-- las tablas `customers`, `visits`, `categories`, `products`, `admins`, `delivery_addresses`, `orders`, `order_items` y `payments`,
-- índices y restricciones,
-- **RLS** activado (el público solo puede leer categorías activas y productos disponibles; datos personales, pedidos y admins cerrados),
-- las funciones `registrar_visita(...)` y `crear_pedido(...)` `SECURITY DEFINER` con idempotencia y validación de precios en servidor,
-- bucket de Storage para fotografías.
+- las tablas `customers`, `visits`, `categories`, `products`, `admins`, `delivery_addresses`, `orders`, `order_items`, `payments`, `payment_accounts`, `payment_proofs` y `admin_push_subscriptions`,
+- índices y restricciones, auditoría de pagos (`reviewed_by`, `reviewed_at`, `confirmed_by`, `confirmed_at`) y `bank_account_id` en pedidos/comprobantes,
+- **RLS** activado (el público solo puede leer categorías activas y productos disponibles; datos personales, pedidos, comprobantes y admins cerrados),
+- las funciones `registrar_visita(...)` y `crear_pedido(...)` `SECURITY DEFINER` con idempotencia, validación de precios en servidor y cuenta bancaria obligatoria en transferencias,
+- bucket público `menu-images` para fotografías y bucket **privado** `comprobantes` para los comprobantes.
 
 La migración ya está implementada en [`repository.py`](repository.py): con `PV_SUPABASE_URL` y `PV_SUPABASE_SERVICE_ROLE_KEY` definidas, todas las consultas y transacciones usan Supabase REST/RPC; sin esas variables, se usa SQLite local. **Antes de publicar los pedidos hay que volver a ejecutar todo el SQL en Supabase** (ver [DEPLOY_VERCEL.md](DEPLOY_VERCEL.md)) para crear tablas y la RPC `crear_pedido`. Nunca pongas la service role key ni la contraseña del admin en JavaScript ni en archivos públicos.
 
-Las fotos siguen el mismo patrón: [`storage.py`](storage.py) guarda en `static/uploads/` en local y en el bucket `menu-images` de Supabase Storage en producción.
+Las fotos siguen el mismo patrón: [`storage.py`](storage.py) guarda en `static/uploads/` en local y en el bucket `menu-images` de Supabase Storage en producción. Los comprobantes, en cambio, se guardan en `state/comprobantes/` en local y en el bucket privado `comprobantes` en producción; el servidor genera una URL firmada de corta duración solo para el administrador autorizado.
+
+Al actualizar la app hay que **volver a ejecutar todo el SQL** con **Run and enable RLS** (nunca «Run without RLS») antes de publicar: la RPC antigua de 7 parámetros se sustituye por la de 8 con `p_bank_account_id`.
 
 ---
 
@@ -155,7 +163,8 @@ Las fotos siguen el mismo patrón: [`storage.py`](storage.py) guarda en `static/
 
 - Contraseñas con PBKDF2-SHA256 (210 000 iteraciones) + salt aleatorio.
 - Sesiones de admin en Base de datos, cookie HttpOnly y CSRF en todos los mutadores.
-- Confirmación de pago restringida al panel: exige sesión de admin, CSRF y `confirmado: true`; el navegador del cliente no puede llamarla.
+- Confirmación de pago restringida al panel: exige sesión de admin y CSRF; el navegador del cliente no puede llamarla. La revisión de transferencias exige comprobante y guarda auditoría; subir la imagen no basta para aprobar.
+- Comprobantes privados: nunca se sirven desde `/static`; en producción se entregan con URLs firmadas por el servidor y solo a sesiones de administrador.
 - Límite de intentos por IP y por teléfono (ventana de 1 hora) y campo honeypot.
 - Validación en servidor de nombre, teléfono, consentimiento, token, cantidades y precios; el total del navegador nunca se confía.
 - Teléfonos enmascarados en el resumen público del panel (`***-***-0000`); completos solo en gestión privada y exportaciones.
@@ -171,7 +180,7 @@ set PYTHONPATH=%cd%\src;%cd%
 .venv\Scripts\python.exe -m punto_vivo.tests.run_tests
 ```
 
-Cubre 117 comprobaciones: cliente nuevo/existente, visitas, fechas/horas, doble envío, menú y QR, login/CSRF/bloqueo, productos, imágenes, CSV, PWA, carrito y checkout, validación de precios, idempotencia de pedidos, aislamiento entre clientes, estados, pago del administrador, ventas, rechazos, borrado de ventas con contraseña, perfiles, frecuentes y protección de datos.
+Cubre 149 comprobaciones: cliente nuevo/existente, visitas, fechas/horas, doble envío, menú y QR, login/CSRF/bloqueo, productos, imágenes, CSV, PWA, carrito y checkout, validación de precios, idempotencia de pedidos, aislamiento entre clientes, estados, pago del administrador, ventas, rechazos, borrado de ventas con contraseña, perfiles, frecuentes, protección de datos y el flujo completo de transferencias (cuentas, comprobantes privados, estados de pago, auditoría, doble confirmación y notificaciones).
 
 ---
 
@@ -182,7 +191,8 @@ punto_vivo/
   app.py                 FastAPI: rutas públicas, API y panel
   db.py                  esquema SQLite, conexiones y datos demo
   repository.py          capa de datos: SQLite local / Supabase en producción
-  storage.py             fotos: local / Supabase Storage
+  storage.py             fotos y comprobantes privados: local / Supabase Storage
+  push.py                notificaciones Web Push al administrador
   visits.py              validación y registro atómico de visitas
   security.py            hash, sesiones, cookies, validación y rate limit
   admin.py               CLI de administradores

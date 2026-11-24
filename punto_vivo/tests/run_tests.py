@@ -321,7 +321,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124a" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124b" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -332,7 +332,7 @@ def run() -> None:
           and "state.categoria = chip.dataset.cat" in _public_js)
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
-          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124a" in _sw.text)
+          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124b" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -437,6 +437,17 @@ def run() -> None:
                            json={"pagado": True, "confirmado": True})
     check("88. Administrador confirma el pago",
           pagado.status_code == 200 and pagado.json()["pago"]["estado"] == "aprobado", pagado.text)
+    admin_audit_id = db.one("SELECT id FROM admins WHERE email=?", (ADMIN_EMAIL,))[0]
+    confirmacion = db.one("SELECT confirmed_by, confirmed_at FROM payments WHERE order_id=?",
+                          (fila["id"],))
+    check("88b. La confirmación registra quién y cuándo",
+          confirmacion["confirmed_by"] == admin_audit_id and bool(confirmacion["confirmed_at"]),
+          str(tuple(confirmacion)))
+    doble_confirmacion = anonimo.patch(f"/api/admin/pedidos/{fila['id']}/pago",
+                                       headers=admin_headers(),
+                                       json={"pagado": True, "confirmado": True})
+    check("88c. No se puede confirmar dos veces el mismo pago", doble_confirmacion.status_code == 400,
+          doble_confirmacion.text)
     ventas1 = anonimo.get("/api/admin/ventas", headers=admin_headers()).json()
     check("89. Venta definitiva cuando se marca pagado",
           ventas1["total_ventas"] == 500.0 and ventas1["ventas_hoy"] == 500.0
@@ -449,7 +460,7 @@ def run() -> None:
     pedido2 = client.post("/api/pedido", json={
         "items": [{"product_id": ppid, "quantity": 1, "notes": ""}],
         "request_token": "pedido-token-dos-123456", "delivery_method": "retiro",
-        "notes": "", "payment_method": "tarjeta"})
+        "notes": "", "payment_method": "efectivo"})
     check("91. Segundo pedido registrado", pedido2.status_code == 200, pedido2.text)
     num2 = pedido2.json()["numero"]
     fila2 = db.one("SELECT * FROM orders WHERE order_number=?", (num2,))
@@ -529,6 +540,193 @@ def run() -> None:
           and db.one("SELECT status FROM payments WHERE order_id=?", (fila2["id"],))[0] == "reembolsado",
           repetir_borrado.text)
 
+    # ------------------------------------------- transferencias y comprobantes
+    _menu_transferencias = client.get("/menu").text
+    _admin_transferencias = anonimo.get("/admin").text
+    check("118. Sin tarjeta y con Mis pedidos y Pagos en la interfaz",
+          '<option value="tarjeta">' not in _menu_transferencias
+          and '"tarjeta"' not in _public_js
+          and 'id="mis-pedidos-button"' in _menu_transferencias
+          and 'id="checkout-bancos"' in _menu_transferencias
+          and 'id="mis-pedidos-dialog"' in _menu_transferencias
+          and 'data-section="pagos"' in _admin_transferencias
+          and 'data-section="config-pagos"' in _admin_transferencias
+          and 'id="comprobante-backdrop"' in _admin_transferencias)
+
+    borradores = anonimo.get("/api/admin/pagos/cuentas", headers=admin_headers()).json()["cuentas"]
+    check("119. Borradores bancarios sin titular ni cuenta inventados",
+          [c["banco"] for c in borradores[:3]] == ["Banco Popular", "BHD", "Banreservas"]
+          and all(not c["activa"] and not c["titular"] and not c["numero"]
+                  for c in borradores[:3]), str(borradores[:3]))
+    check("120. Los borradores no se publican al cliente",
+          client.get("/api/pagos/cuentas").json()["cuentas"] == [])
+
+    cliente_transferencia = TestClient(app)
+    registro_trans = cliente_transferencia.post("/api/visita", json={
+        "full_name": "Cliente Transferencia", "phone": "8094445555", "consent": True,
+        "request_token": "visita-transferencia-123456", "website": "",
+    })
+    check("121. Cliente de transferencia registrado", registro_trans.status_code == 200,
+          registro_trans.text)
+    pedido_base = {
+        "items": [{"product_id": ppid, "quantity": 1, "notes": ""}],
+        "delivery_method": "retiro", "notes": "",
+    }
+    con_tarjeta = cliente_transferencia.post("/api/pedido", json={
+        **pedido_base, "request_token": "pedido-tarjeta-rechazado-01",
+        "payment_method": "tarjeta",
+    })
+    check("122. Tarjeta ya no se acepta como método de pago", con_tarjeta.status_code == 400,
+          con_tarjeta.text)
+    sin_banco = cliente_transferencia.post("/api/pedido", json={
+        **pedido_base, "request_token": "pedido-sin-banco-12345",
+        "payment_method": "transferencia",
+    })
+    check("123. Transferencia sin cuenta activa se rechaza", sin_banco.status_code == 400,
+          sin_banco.text)
+
+    cuenta_nueva = anonimo.post("/api/admin/pagos/cuentas", headers=admin_headers(), json={
+        "banco": "Banco de prueba", "titular": "Titular de prueba", "numero": "0000000000",
+        "tipo": "Ahorros", "identificacion": "000-0000000-0",
+        "instrucciones": "Usa el número de pedido como concepto", "activa": True, "orden": 9,
+    })
+    check("124. Administrador crea una cuenta activa",
+          cuenta_nueva.status_code == 200 and cuenta_nueva.json()["activa"] == 1,
+          cuenta_nueva.text)
+    cuenta_id = cuenta_nueva.json()["id"]
+    publicadas = cliente_transferencia.get("/api/pagos/cuentas").json()["cuentas"]
+    check("125. Solo la cuenta activa y completa llega al menú",
+          len(publicadas) == 1 and publicadas[0]["id"] == cuenta_id
+          and publicadas[0]["banco"] == "Banco de prueba", str(publicadas))
+
+    # Si falla el envío de la notificación, el pedido debe quedar guardado igual.
+    from punto_vivo import push as pv_push
+    notificar_original = pv_push.notificar_nuevo_pedido
+    pv_push.notificar_nuevo_pedido = lambda *args, **kwargs: (_ for _ in ()).throw(
+        RuntimeError("fallo simulado de notificación"))
+    try:
+        pedido_trans = cliente_transferencia.post("/api/pedido", json={
+            **pedido_base, "request_token": "pedido-transferencia-12345",
+            "payment_method": "transferencia", "bank_account_id": cuenta_id,
+        })
+    finally:
+        pv_push.notificar_nuevo_pedido = notificar_original
+    check("126. Pedido guardado aunque falle la notificación",
+          pedido_trans.status_code == 200 and pedido_trans.json()["pedido_id"] > 0,
+          pedido_trans.text)
+    tid = pedido_trans.json()["pedido_id"]
+    fila_trans = db.one("SELECT bank_account_id FROM orders WHERE id=?", (tid,))
+    pago_trans = db.one("SELECT method, status FROM payments WHERE order_id=?", (tid,))
+    check("127. Transferencia pendiente y ligada a la cuenta elegida",
+          fila_trans["bank_account_id"] == cuenta_id and pago_trans["method"] == "transferencia"
+          and pago_trans["status"] == "pendiente", str(tuple(pago_trans)))
+
+    mios = cliente_transferencia.get("/api/pedidos/mios").json()["pedidos"]
+    check("128. Mis pedidos muestra el banco y el estado real del pago",
+          any(p["id"] == tid and p["pago_estado"] == "pendiente"
+              and p["banco"] == "Banco de prueba" for p in mios), str(mios))
+    check("128b. Otro cliente no ve el pedido de transferencia",
+          all(p["id"] != tid for p in client.get("/api/pedidos/mios").json()["pedidos"]))
+    transferencias = anonimo.get("/api/admin/pagos/transferencias",
+                                 headers=admin_headers()).json()
+    check("128c. El panel lista las transferencias",
+          any(p["id"] == tid for p in transferencias["pedidos"]))
+
+    sin_comprobante_revision = anonimo.patch(f"/api/admin/pedidos/{tid}/revision",
+                                             headers=admin_headers(),
+                                             json={"decision": "aprobado", "nota": ""})
+    check("129. No se aprueba una transferencia sin comprobante",
+          sin_comprobante_revision.status_code == 400, sin_comprobante_revision.text)
+    cliente_sin_admin = TestClient(app)
+    sin_sesion_revision = cliente_sin_admin.patch(f"/api/admin/pedidos/{tid}/revision",
+                                                  json={"decision": "aprobado", "nota": ""})
+    check("129b. El cliente no puede revisar pagos", sin_sesion_revision.status_code == 401)
+
+    archivo_falso = cliente_transferencia.post(f"/api/pedidos/{tid}/comprobante",
+                                               files={"file": ("falso.txt", b"no", "text/plain")})
+    check("130. Comprobante con extensión y cabecera falsas se rechaza",
+          archivo_falso.status_code == 400, archivo_falso.text)
+    sin_archivo = anonimo.get(f"/api/admin/pedidos/{tid}/comprobante", headers=admin_headers())
+    check("131. Sin comprobante el admin recibe 404", sin_archivo.status_code == 404)
+    sin_sesion_archivo = cliente_sin_admin.get(f"/api/admin/pedidos/{tid}/comprobante")
+    check("131b. El comprobante exige sesión de administrador",
+          sin_sesion_archivo.status_code == 401)
+
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 48
+    subida = cliente_transferencia.post(f"/api/pedidos/{tid}/comprobante",
+                                        files={"file": ("comprobante.png", png, "image/png")})
+    check("132. Subir comprobante no confirma el pago",
+          subida.status_code == 200 and subida.json()["pago_estado"] == "comprobante_recibido"
+          and db.one("SELECT status FROM payments WHERE order_id=?", (tid,))[0] == "comprobante_recibido",
+          subida.text)
+    archivo = anonimo.get(f"/api/admin/pedidos/{tid}/comprobante", headers=admin_headers())
+    check("133. El admin puede ver el comprobante privado",
+          archivo.status_code == 200
+          and archivo.json()["datos"].startswith("data:image/png;base64,"), archivo.text)
+
+    revision = anonimo.patch(f"/api/admin/pedidos/{tid}/revision", headers=admin_headers(),
+                             json={"decision": "en_verificacion", "nota": "Revisando depósito"})
+    auditado = db.one("SELECT reviewed_by, reviewed_at, review_note, confirmed_by "
+                      "FROM payments WHERE order_id=?", (tid,))
+    check("134. Revisión con nota queda auditada",
+          revision.status_code == 200
+          and revision.json()["pago"]["estado"] == "en_verificacion"
+          and auditado["reviewed_by"] == admin_audit_id and bool(auditado["reviewed_at"])
+          and auditado["review_note"] == "Revisando depósito"
+          and auditado["confirmed_by"] is None, str(tuple(auditado)))
+    nota_cliente = cliente_transferencia.get("/api/pedidos/mios").json()["pedidos"]
+    check("135. La nota de la revisión llega al cliente",
+          any(p["id"] == tid and p["pago_nota"] == "Revisando depósito" for p in nota_cliente))
+
+    rechazo_comprobante = anonimo.patch(f"/api/admin/pedidos/{tid}/revision",
+                                        headers=admin_headers(),
+                                        json={"decision": "rechazado",
+                                              "nota": "No apareció el depósito"})
+    check("136. Rechazar comprobante no confirma la venta",
+          rechazo_comprobante.status_code == 200
+          and db.one("SELECT status FROM payments WHERE order_id=?", (tid,))[0] == "rechazado"
+          and anonimo.get("/api/admin/ventas", headers=admin_headers()).json()["total_ventas"] == 0.0,
+          rechazo_comprobante.text)
+    reenvio = cliente_transferencia.post(f"/api/pedidos/{tid}/comprobante",
+                                         files={"file": ("comprobante2.png", png, "image/png")})
+    check("137. El cliente puede reenviar el comprobante tras un rechazo",
+          reenvio.status_code == 200 and reenvio.json()["pago_estado"] == "comprobante_recibido",
+          reenvio.text)
+
+    aprobacion = anonimo.patch(f"/api/admin/pedidos/{tid}/revision", headers=admin_headers(),
+                               json={"decision": "aprobado", "nota": "Transferencia recibida"})
+    confirmado = db.one("SELECT status, confirmed_by, confirmed_at FROM payments WHERE order_id=?",
+                        (tid,))
+    check("138. El admin confirma tras verificar el dinero",
+          aprobacion.status_code == 200 and confirmado["status"] == "aprobado"
+          and confirmado["confirmed_by"] == admin_audit_id and bool(confirmado["confirmed_at"]),
+          aprobacion.text)
+    doble_revision = anonimo.patch(f"/api/admin/pedidos/{tid}/revision", headers=admin_headers(),
+                                   json={"decision": "aprobado", "nota": "Otra vez"})
+    check("139. La doble confirmación de transferencia se bloquea",
+          doble_revision.status_code == 400, doble_revision.text)
+    comprobante_tarde = cliente_transferencia.post(f"/api/pedidos/{tid}/comprobante",
+                                                   files={"file": ("tarde.png", png, "image/png")})
+    check("139b. Un pago aprobado ya no admite comprobantes",
+          comprobante_tarde.status_code == 400, comprobante_tarde.text)
+    check("140. La transferencia confirmada sí cuenta como venta",
+          anonimo.get("/api/admin/ventas", headers=admin_headers()).json()["total_ventas"] == 250.0)
+
+    clave_push = anonimo.get("/api/admin/push/clave", headers=admin_headers())
+    check("141. Consulta de clave push sin exponer secretos",
+          clave_push.status_code == 200 and isinstance(clave_push.json()["configurado"], bool)
+          and "private" not in clave_push.text.lower(), clave_push.text)
+    suscripcion = {"endpoint": "https://ejemplo.invalid/push/prueba-unica",
+                   "p256dh": "clave-publica-de-prueba", "auth": "secreto-de-prueba"}
+    alta_push = anonimo.post("/api/admin/push/suscribir", headers=admin_headers(),
+                             json=suscripcion)
+    baja_push = anonimo.request("DELETE", "/api/admin/push/suscribir", headers=admin_headers(),
+                                json=suscripcion)
+    check("142. Suscripción push se registra y se retira",
+          alta_push.status_code == 200 and baja_push.status_code == 200
+          and db.one("SELECT COUNT(*) FROM admin_push_subscriptions WHERE endpoint=?",
+                     (suscripcion["endpoint"],))[0] == 0, f"{alta_push.text} {baja_push.text}")
+
     _menu_pedidos = client.get("/menu").text
     _public_js_pedidos = (_base_ui / "static" / "js" / "public.js").read_text(encoding="utf-8")
     check("99. Carrito y checkout presentes en el menú",
@@ -582,7 +780,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261124a" in _sw.text)
+          and "pvf-static-20261124b" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js

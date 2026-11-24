@@ -1,6 +1,7 @@
 """PUNTO VIVO FRESH · aplicación FastAPI (público + panel administrativo)."""
 from __future__ import annotations
 
+import base64
 import csv
 import io
 import re
@@ -12,14 +13,14 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import qrcode
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from . import admin as admin_tools
-from . import repository, security, storage, visits
+from . import push, repository, security, storage, visits
 from .config import (
     ADMIN_COOKIE,
     CSRF_HEADER,
@@ -28,7 +29,9 @@ from .config import (
     VISITOR_COOKIE,
     WELCOME_PATH,
     MAX_IMAGE_BYTES,
+    MAX_PROOF_BYTES,
     ensure_dirs,
+    vapid_keys,
     now_local,
     welcome_url,
 )
@@ -85,6 +88,12 @@ def require_admin(request: Request) -> Any:
         if request.headers.get(CSRF_HEADER) != session["csrf_token"]:
             raise HTTPException(status_code=403, detail="Token de seguridad inválido.")
     return session
+
+
+def admin_id(session: dict[str, Any]) -> int | None:
+    """Id del administrador sesionado, para la auditoría de pagos."""
+    admin = repository.get_admin_by_email(session["email"])
+    return int(admin["id"]) if admin else None
 
 
 def require_visitor(request: Request) -> bool:
@@ -227,6 +236,7 @@ class OrderIn(BaseModel):
     address: OrderAddressIn | None = None
     notes: str = ""
     payment_method: str = "efectivo"
+    bank_account_id: int | None = None
 
 
 class OrderActionIn(BaseModel):
@@ -242,6 +252,28 @@ class OrderPaymentIn(BaseModel):
 
 class BorrarPedidoIn(BaseModel):
     password: str
+
+
+class PaymentAccountIn(BaseModel):
+    banco: str = ""
+    titular: str = ""
+    numero: str = ""
+    tipo: str = ""
+    identificacion: str = ""
+    instrucciones: str = ""
+    activa: bool = False
+    orden: int = 0
+
+
+class PaymentReviewIn(BaseModel):
+    decision: str
+    nota: str = ""
+
+
+class PushSubscriptionIn(BaseModel):
+    endpoint: str
+    p256dh: str
+    auth: str
 
 
 # ------------------------------------------------------------------ páginas públicas
@@ -437,7 +469,7 @@ def api_crear_pedido(payload: OrderIn, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=403, detail='Origen no permitido.')
     if len(payload.request_token.strip()) < 8:
         raise HTTPException(status_code=400, detail='Token de pedido no válido.')
-    visit_id, _ = visitor_customer(request)
+    visit_id, customer_id = visitor_customer(request)
     direccion = payload.address.model_dump() if payload.address else None
     try:
         pedido = repository.create_order(
@@ -448,14 +480,27 @@ def api_crear_pedido(payload: OrderIn, request: Request) -> dict[str, Any]:
             direccion,
             payload.notes,
             payload.payment_method,
+            payload.bank_account_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not pedido['duplicate']:
+        # La notificación es un extra: un fallo nunca invalida el pedido ya guardado.
+        try:
+            cliente = repository.get_customer(customer_id)
+            push.notificar_nuevo_pedido(
+                pedido['order_number'],
+                cliente['full_name'] if cliente else 'Cliente',
+                pedido['total'],
+            )
+        except Exception:
+            pass
     return {
         'ok': True,
         'numero': pedido['order_number'],
+        'pedido_id': pedido['order_id'],
         'total': pedido['total'],
         'duplicate': pedido['duplicate'],
         'mensaje': ('Este pedido ya estaba registrado.' if pedido['duplicate']
@@ -468,6 +513,69 @@ def api_pedidos_mios(request: Request) -> dict[str, Any]:
     """El cliente solo ve los pedidos ligados a su visita; nunca por ID ajeno."""
     _, customer_id = visitor_customer(request)
     return {'pedidos': repository.customer_orders(customer_id)}
+
+
+@app.get('/api/pagos/cuentas')
+def api_cuentas_publicas() -> dict[str, Any]:
+    """Datos bancarios activos y completos; los borradores nunca se publican."""
+    return {'cuentas': repository.public_payment_accounts()}
+
+
+def tipo_comprobante(nombre: str, datos: bytes) -> str:
+    """Valida extensión y cabecera real: JPG, JPEG, PNG o PDF, hasta 5 MB."""
+    extension = Path(nombre or '').suffix.lower()
+    firmas = {
+        '.jpg': (b'\xff\xd8\xff', 'image/jpeg'),
+        '.jpeg': (b'\xff\xd8\xff', 'image/jpeg'),
+        '.png': (b'\x89PNG\r\n\x1a\n', 'image/png'),
+        '.pdf': (b'%PDF-', 'application/pdf'),
+    }
+    permitido = firmas.get(extension)
+    if permitido is None or not datos.startswith(permitido[0]):
+        raise ValueError('El comprobante debe ser JPG, JPEG, PNG o PDF.')
+    if not 0 < len(datos) <= MAX_PROOF_BYTES:
+        raise ValueError(f'El comprobante no puede superar {MAX_PROOF_BYTES // (1024 * 1024)} MB.')
+    return permitido[1]
+
+
+@app.post('/api/pedidos/{pedido_id}/comprobante')
+async def api_subir_comprobante(pedido_id: int, request: Request,
+                                file: UploadFile = File(...)) -> dict[str, Any]:
+    """El cliente sube su comprobante; eso nunca confirma el pago."""
+    if not origin_ok(request):
+        raise HTTPException(status_code=403, detail='Origen no permitido.')
+    _, customer_id = visitor_customer(request)
+    pedido = repository.get_order(pedido_id)
+    if pedido is None or pedido['cliente_id'] != customer_id:
+        raise HTTPException(status_code=404, detail='Pedido no encontrado.')
+    pago = pedido['pago'] or {}
+    if pago.get('metodo') != 'transferencia':
+        raise HTTPException(status_code=400, detail='Este pedido no es por transferencia.')
+    if pago.get('estado', 'pendiente') not in repository.ESTADOS_CON_COMPROBANTE:
+        raise HTTPException(status_code=400, detail='Este pago ya no admite comprobantes.')
+    datos = await file.read(MAX_PROOF_BYTES + 1)
+    try:
+        content_type = tipo_comprobante(file.filename or '', datos)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    extension = Path(file.filename or '').suffix.lower()
+    nombre = f'comprobante-{pedido_id}-{uuid4().hex}{extension}'
+    ruta = storage.save_private_file(nombre, datos, content_type)
+    anterior = repository.get_payment_proof(pedido_id)
+    try:
+        repository.save_payment_proof(
+            pedido_id, customer_id, pedido.get('banco_id'),
+            Path(file.filename or nombre).name[:120], ruta, content_type, len(datos),
+        )
+        actualizado = repository.mark_proof_received(pedido_id)
+    except Exception:
+        if anterior is None:
+            storage.delete_private_file(ruta)
+        raise HTTPException(status_code=400, detail='No se pudo guardar el comprobante.')
+    return {
+        'ok': True, 'pago_estado': actualizado['pago']['estado'],
+        'mensaje': 'Comprobante recibido. El negocio debe verificar la transferencia.',
+    }
 
 
 # ------------------------------------------------------------------ autenticación admin
@@ -684,12 +792,115 @@ def api_pedido_pago(pedido_id: int, payload: OrderPaymentIn,
     if not payload.confirmado:
         raise HTTPException(status_code=400, detail="Confirma la acción para continuar.")
     try:
-        pedido = repository.set_order_paid(pedido_id, payload.pagado, payload.referencia)
+        pedido = repository.set_order_paid(pedido_id, payload.pagado, payload.referencia,
+                                           admin_id(session))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if pedido is None:
         raise HTTPException(status_code=404, detail="Pedido no encontrado.")
     return pedido
+
+
+@app.patch("/api/admin/pedidos/{pedido_id}/revision")
+def api_pedido_revision(pedido_id: int, payload: PaymentReviewIn,
+                        session=Depends(require_admin)) -> dict[str, Any]:
+    """Verificación explícita del administrador, con nota y auditoría."""
+    autor = admin_id(session)
+    if autor is None:
+        raise HTTPException(status_code=401, detail="Administrador no encontrado.")
+    try:
+        pedido = repository.review_payment(pedido_id, payload.decision, autor, payload.nota)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if pedido is None:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    return pedido
+
+
+@app.get("/api/admin/pedidos/{pedido_id}/comprobante")
+def api_comprobante_admin(pedido_id: int, session=Depends(require_admin)) -> dict[str, Any]:
+    """Comprobante privado: nunca se sirve desde /static ni sin sesión admin."""
+    proof = repository.get_payment_proof(pedido_id)
+    if proof is None:
+        raise HTTPException(status_code=404, detail="Este pedido no tiene comprobante.")
+    datos = ''
+    url = ''
+    try:
+        url = storage.signed_proof_url(proof['ruta'])
+        if not url:
+            contenido = storage.read_private_file(proof['ruta'])
+            datos = 'data:' + proof['tipo'] + ';base64,' + base64.b64encode(contenido).decode('ascii')
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="No se pudo leer el comprobante.") from exc
+    return {
+        'nombre': proof['nombre'], 'tipo': proof['tipo'], 'tamano': proof['tamano'],
+        'enviado': proof['enviado'], 'url': url, 'datos': datos,
+    }
+
+
+@app.get("/api/admin/pagos/transferencias")
+def api_transferencias(session=Depends(require_admin)) -> dict[str, Any]:
+    pedidos = [p for p in repository.list_orders(limit=1000)
+               if p['metodo_pago'] == 'transferencia']
+    return {'total': len(pedidos), 'pedidos': pedidos}
+
+
+@app.get("/api/admin/pagos/cuentas")
+def api_cuentas_admin(session=Depends(require_admin)) -> dict[str, Any]:
+    return {'cuentas': repository.list_payment_accounts()}
+
+
+@app.post("/api/admin/pagos/cuentas")
+def api_crear_cuenta(payload: PaymentAccountIn, session=Depends(require_admin)) -> dict[str, Any]:
+    try:
+        return repository.create_payment_account(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.put("/api/admin/pagos/cuentas/{cuenta_id}")
+def api_editar_cuenta(cuenta_id: int, payload: PaymentAccountIn,
+                      session=Depends(require_admin)) -> dict[str, Any]:
+    try:
+        cuenta = repository.update_payment_account(cuenta_id, payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if cuenta is None:
+        raise HTTPException(status_code=404, detail="Cuenta no encontrada.")
+    return cuenta
+
+
+@app.delete("/api/admin/pagos/cuentas/{cuenta_id}")
+def api_borrar_cuenta(cuenta_id: int, session=Depends(require_admin)) -> dict[str, Any]:
+    if not repository.delete_payment_account(cuenta_id):
+        raise HTTPException(status_code=404, detail="Cuenta no encontrada.")
+    return {'eliminada': cuenta_id}
+
+
+@app.get("/api/admin/push/clave")
+def api_push_clave(session=Depends(require_admin)) -> dict[str, Any]:
+    publica, _ = vapid_keys()
+    return {'publica': publica, 'configurado': bool(publica)}
+
+
+@app.post("/api/admin/push/suscribir")
+def api_push_suscribir(payload: PushSubscriptionIn,
+                       session=Depends(require_admin)) -> dict[str, Any]:
+    if not payload.endpoint.startswith('https://'):
+        raise HTTPException(status_code=400, detail="Suscripción no válida.")
+    autor = admin_id(session)
+    if autor is None:
+        raise HTTPException(status_code=401, detail="Administrador no encontrado.")
+    repository.add_push_subscription(autor, payload.endpoint[:1000],
+                                     payload.p256dh[:500], payload.auth[:500])
+    return {'ok': True}
+
+
+@app.delete("/api/admin/push/suscribir")
+def api_push_desuscribir(payload: PushSubscriptionIn,
+                         session=Depends(require_admin)) -> dict[str, Any]:
+    borradas = repository.remove_push_subscription(payload.endpoint[:1000])
+    return {'ok': True, 'eliminadas': borradas}
 
 
 @app.delete("/api/admin/pedidos/{pedido_id}")

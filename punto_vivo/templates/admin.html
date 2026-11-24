@@ -14,6 +14,7 @@
     <nav class="admin-nav" id="admin-nav">
       <button class="nav-item is-active" data-section="resumen" data-short="Resumen"><span class="nav-icon">📊</span><span class="nav-label">Resumen</span></button>
       <button class="nav-item" data-section="pedidos" data-short="Pedidos" id="nav-pedidos"><span class="nav-icon">🧾</span><span class="nav-label">Pedidos</span><span class="nav-badge" id="pedidos-badge" hidden>0</span></button>
+      <button class="nav-item" data-section="pagos" data-short="Pagos" id="nav-pagos"><span class="nav-icon">💳</span><span class="nav-label">Pagos</span></button>
       <button class="nav-item" data-section="ventas" data-short="Ventas"><span class="nav-icon">💰</span><span class="nav-label">Ventas</span></button>
       <button class="nav-item" data-section="frecuentes" data-short="Frec."><span class="nav-icon">⭐</span><span class="nav-label">Clientes frecuentes</span></button>
       <button class="nav-item" data-section="clientes" data-short="Clientes"><span class="nav-icon">👥</span><span class="nav-label">Clientes</span></button>
@@ -21,6 +22,7 @@
       <button class="nav-item" data-section="menu" data-short="Menú"><span class="nav-icon">🍔</span><span class="nav-label">Administrar menú</span></button>
       <button class="nav-item" data-section="usuarios" data-short="Usuarios"><span class="nav-icon">🔐</span><span class="nav-label">Usuarios</span></button>
       <button class="nav-item" data-section="qr" data-short="QR"><span class="nav-icon">🔳</span><span class="nav-label">Código QR</span></button>
+      <button class="nav-item" data-section="config-pagos" data-short="Bancos" id="nav-config-pagos"><span class="nav-icon">🏦</span><span class="nav-label">CONFIGURACIÓN DE PAGOS</span></button>
     </nav>
     <div class="sidebar-bottom">
       <div class="admin-user"><span class="avatar">{{ admin_email[0]|upper }}</span><div><strong>{{ admin_email }}</strong><small>Administrador</small></div></div>
@@ -105,6 +107,63 @@
           <th>N.º pedido</th><th>Cliente</th><th>Teléfono</th><th>Entrega</th><th>Total</th>
           <th>Estado</th><th>Pago</th><th>Fecha</th><th></th>
         </tr></thead><tbody id="pedidos-body"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------- PAGOS -->
+    <section class="admin-section" id="section-pagos">
+      <div class="panel">
+        <div class="panel-head"><div><h2>Transferencias y comprobantes</h2><p>Verifica el dinero recibido antes de confirmar cualquier pago</p></div>
+          <div class="toolbar">
+            <select id="pago-estado" aria-label="Filtrar por estado de pago">
+              <option value="">Todos los estados</option>
+              <option value="pendiente">Pendiente de pago</option>
+              <option value="comprobante_recibido">Comprobante recibido</option>
+              <option value="en_verificacion">En verificación</option>
+              <option value="aprobado">Pago confirmado</option>
+              <option value="rechazado">Pago rechazado</option>
+              <option value="reembolsado">Reembolsado</option>
+            </select>
+            <button class="btn btn-outline btn-sm" id="btn-refrescar-pagos" type="button">Actualizar</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table class="data-table"><thead><tr>
+          <th>N.º pedido</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Banco</th>
+          <th>Comprobante</th><th>Enviado</th><th>Estado del pago</th><th></th>
+        </tr></thead><tbody id="pagos-body"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------- CONFIGURACIÓN DE PAGOS -->
+    <section class="admin-section" id="section-config-pagos">
+      <div class="panel">
+        <div class="panel-head"><div><h2>CONFIGURACIÓN DE PAGOS</h2><p>Completa los borradores de Banco Popular, BHD y Banreservas. Solo las cuentas activas y completas se muestran al cliente.</p></div></div>
+        <form id="cuenta-form" class="inline-form">
+          <input type="hidden" id="cuenta-id">
+          <div class="form-grid">
+            <label>Nombre del banco<input type="text" id="cuenta-banco" required maxlength="80" placeholder="Ej.: Banco Popular"></label>
+            <label>Nombre del titular<input type="text" id="cuenta-titular" maxlength="120"></label>
+            <label>Número de cuenta<input type="text" id="cuenta-numero" maxlength="40"></label>
+            <label>Tipo de cuenta<input type="text" id="cuenta-tipo" maxlength="40" placeholder="Ahorros / Corriente"></label>
+            <label>Cédula o identificación<input type="text" id="cuenta-identificacion" maxlength="40"></label>
+            <label>Orden<input type="number" id="cuenta-orden" value="0"></label>
+            <label class="full">Instrucciones adicionales<textarea id="cuenta-instrucciones" rows="2" maxlength="500" placeholder="Ej.: enviar con el número de pedido como concepto"></textarea></label>
+          </div>
+          <div class="form-row check-row">
+            <label class="check-label"><input type="checkbox" id="cuenta-activa"> Cuenta activa (visible para el cliente)</label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-sm" id="cuenta-guardar">Guardar cuenta</button>
+            <button type="button" class="btn btn-outline btn-sm" id="cuenta-limpiar">Nueva cuenta</button>
+          </div>
+        </form>
+        <div class="table-wrap"><table class="data-table"><thead><tr>
+          <th>Banco</th><th>Titular</th><th>Cuenta</th><th>Tipo</th><th>Estado</th><th></th>
+        </tr></thead><tbody id="cuentas-body"></tbody></table></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div><h2>Notificaciones del navegador</h2><p id="push-estado">Activa el permiso para recibir un aviso cuando llegue un pedido nuevo.</p></div></div>
+        <button class="btn btn-primary btn-sm" id="push-activar" type="button">🔔 Activar notificaciones</button>
       </div>
     </section>
 
@@ -236,6 +295,24 @@
 </div>
 
 <!-- ---------------------------------------------------- MODALES -->
+<div class="modal-backdrop hidden" id="comprobante-backdrop">
+  <div class="modal-card modal-wide">
+    <div class="modal-head"><h2 id="comprobante-title">Comprobante</h2><button class="icon-btn" data-close="comprobante-backdrop">✕</button></div>
+    <div class="modal-body" id="comprobante-body"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="revision-backdrop">
+  <div class="modal-card">
+    <div class="modal-head"><h2 id="revision-title">Revisar pago</h2><button class="icon-btn" data-close="revision-backdrop">✕</button></div>
+    <div class="modal-body">
+      <p class="small-note" id="revision-detalle"></p>
+      <label>Explicación para el cliente (obligatoria si rechazas)<textarea id="revision-nota" rows="3" maxlength="500" placeholder="Ej.: La transferencia no apareció en la cuenta. Vuelve a enviarla."></textarea></label>
+    </div>
+    <div class="modal-foot"><button class="btn btn-outline btn-sm" data-close="revision-backdrop">Cancelar</button><button class="btn btn-primary btn-sm" id="revision-confirmar" type="button">Confirmar decisión</button></div>
+  </div>
+</div>
+
 <div class="modal-backdrop hidden" id="history-backdrop">
   <div class="modal-card">
     <div class="modal-head"><h2 id="history-title">Historial de visitas</h2><button class="icon-btn" data-close="history-backdrop">✕</button></div>

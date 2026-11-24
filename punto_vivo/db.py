@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS orders (
     delivery_fee             NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK(delivery_fee >= 0),
     total                    NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK(total >= 0),
     idempotency_key          TEXT    NOT NULL UNIQUE,
+    bank_account_id          INTEGER REFERENCES payment_accounts(id) ON DELETE SET NULL,
     created_at               TEXT    NOT NULL,
     updated_at               TEXT    NOT NULL
 );
@@ -129,14 +130,56 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE TABLE IF NOT EXISTS payments (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id            INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    method              TEXT    NOT NULL CHECK(method IN ('efectivo','tarjeta','transferencia')),
+    method              TEXT    NOT NULL CHECK(method IN ('efectivo','transferencia')),
     status              TEXT    NOT NULL DEFAULT 'pendiente'
-                        CHECK(status IN ('pendiente','aprobado','rechazado','reembolsado')),
+                        CHECK(status IN ('pendiente','comprobante_recibido','en_verificacion',
+                                         'aprobado','rechazado','reembolsado')),
     amount              NUMERIC(10, 2) NOT NULL CHECK(amount >= 0),
     provider            TEXT    NOT NULL DEFAULT '',
     provider_payment_id TEXT    NOT NULL DEFAULT '',
     paid_at             TEXT,
+    review_note         TEXT    NOT NULL DEFAULT '',
+    reviewed_by         INTEGER REFERENCES admins(id) ON DELETE SET NULL,
+    reviewed_at         TEXT,
+    confirmed_by        INTEGER REFERENCES admins(id) ON DELETE SET NULL,
+    confirmed_at        TEXT,
     created_at          TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS payment_accounts (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    bank_name       TEXT    NOT NULL,
+    holder_name     TEXT    NOT NULL DEFAULT '',
+    account_number  TEXT    NOT NULL DEFAULT '',
+    account_type    TEXT    NOT NULL DEFAULT '',
+    id_number       TEXT    NOT NULL DEFAULT '',
+    instructions    TEXT    NOT NULL DEFAULT '',
+    active          INTEGER NOT NULL DEFAULT 0 CHECK(active IN (0, 1)),
+    sort_order      INTEGER NOT NULL DEFAULT 0,
+    created_at      TEXT    NOT NULL,
+    updated_at      TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS payment_proofs (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id        INTEGER NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
+    customer_id     INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+    bank_account_id INTEGER REFERENCES payment_accounts(id) ON DELETE SET NULL,
+    file_name       TEXT    NOT NULL,
+    file_path       TEXT    NOT NULL,
+    content_type    TEXT    NOT NULL,
+    size_bytes      INTEGER NOT NULL CHECK(size_bytes > 0),
+    uploaded_at     TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS admin_push_subscriptions (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_id      INTEGER NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+    endpoint      TEXT    NOT NULL UNIQUE,
+    p256dh        TEXT    NOT NULL,
+    auth          TEXT    NOT NULL,
+    created_at    TEXT    NOT NULL,
+    last_used_at  TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
@@ -152,6 +195,9 @@ CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_product ON order_items(product_id);
 CREATE INDEX IF NOT EXISTS idx_payments_order   ON payments(order_id);
 CREATE INDEX IF NOT EXISTS idx_addresses_customer ON delivery_addresses(customer_id);
+CREATE INDEX IF NOT EXISTS idx_proofs_order     ON payment_proofs(order_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_active  ON payment_accounts(active, sort_order, id);
+CREATE INDEX IF NOT EXISTS idx_push_admin       ON admin_push_subscriptions(admin_id);
 """
 
 DEMO_CATEGORIES = [
@@ -204,10 +250,30 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
+def _ensure_local_columns(conn: sqlite3.Connection) -> None:
+    """Migración mínima para bases locales creadas antes de pagos por transferencia."""
+    altas = {
+        'payments': [
+            ('review_note', "TEXT NOT NULL DEFAULT ''"),
+            ('reviewed_by', 'INTEGER'),
+            ('reviewed_at', 'TEXT'),
+            ('confirmed_by', 'INTEGER'),
+            ('confirmed_at', 'TEXT'),
+        ],
+        'orders': [('bank_account_id', 'INTEGER')],
+    }
+    for tabla, columnas in altas.items():
+        existentes = {fila['name'] for fila in conn.execute(f"PRAGMA table_info({tabla})")}
+        for nombre, definicion in columnas:
+            if nombre not in existentes:
+                conn.execute(f"ALTER TABLE {tabla} ADD COLUMN {nombre} {definicion}")
+
+
 def init_db() -> None:
     conn = connect()
     try:
         conn.executescript(SCHEMA)
+        _ensure_local_columns(conn)
         if conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0] == 0:
             for name, description, order in DEMO_CATEGORIES:
                 conn.execute(
@@ -226,6 +292,16 @@ def init_db() -> None:
                            VALUES(?,?,?,0,?,1,1,?,?,?)""",
                         (cat_id, name, DEMO_DESCRIPTION, image, order, now, now),
                     )
+        # Borradores bancarios: el administrador completa los datos en el panel.
+        # No se inventa ningún número de cuenta ni titular.
+        if conn.execute("SELECT COUNT(*) FROM payment_accounts").fetchone()[0] == 0:
+            for orden, banco in enumerate(('Banco Popular', 'BHD', 'Banreservas'), 1):
+                ahora = now_local().isoformat(timespec='seconds')
+                conn.execute(
+                    """INSERT INTO payment_accounts(bank_name, active, sort_order, created_at, updated_at)
+                       VALUES(?,0,?,?,?)""",
+                    (banco, orden, ahora, ahora),
+                )
     finally:
         conn.close()
 

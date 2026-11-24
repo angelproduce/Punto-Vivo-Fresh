@@ -78,7 +78,7 @@
     });
   }
 
-  const titles = {resumen:'Resumen', pedidos:'Pedidos', ventas:'Ventas', frecuentes:'Clientes frecuentes', clientes:'Clientes', visitas:'Visitas', menu:'Administrar menú', usuarios:'Usuarios', qr:'Código QR'};
+  const titles = {resumen:'Resumen', pedidos:'Pedidos', pagos:'Pagos', ventas:'Ventas', frecuentes:'Clientes frecuentes', clientes:'Clientes', visitas:'Visitas', menu:'Administrar menú', usuarios:'Usuarios', qr:'Código QR', 'config-pagos':'CONFIGURACIÓN DE PAGOS'};
   document.querySelectorAll('#admin-nav .nav-item').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#admin-nav .nav-item').forEach((b) => b.classList.toggle('is-active', b === btn));
@@ -93,6 +93,8 @@
   function load(name) {
     if (name === 'resumen') loadResumen();
     if (name === 'pedidos') loadPedidos();
+    if (name === 'pagos') loadPagos();
+    if (name === 'config-pagos') { loadCuentas(); cargarEstadoPush(); }
     if (name === 'ventas') loadVentas();
     if (name === 'frecuentes') loadFrecuentes();
     if (name === 'clientes') loadClientes();
@@ -132,7 +134,11 @@
     pendiente:'Pendiente', aceptada:'Aceptada', preparando:'Preparando', lista:'Lista',
     entregada:'Entregada', rechazada:'Rechazada', cancelada:'Cancelada',
   };
-  const PAGOS = {pendiente:'Pendiente', aprobado:'Aprobado', rechazado:'Rechazado', reembolsado:'Reembolsado'};
+  const PAGOS = {
+    pendiente:'Pendiente de pago', comprobante_recibido:'Comprobante recibido',
+    en_verificacion:'En verificación', aprobado:'Pago confirmado',
+    rechazado:'Pago rechazado', reembolsado:'Reembolsado',
+  };
   const badge = (valor, mapa) => `<span class="badge badge-${esc(valor)}">${esc(mapa[valor] || valor)}</span>`;
 
   function pedidoQuery() {
@@ -154,10 +160,20 @@
     } else if (p.estado === 'lista') {
       html += `<button class="mini-btn" data-id="${p.id}" data-accion="entregada">Entregado</button>`;
     }
-    if (p.pago_estado === 'pendiente') {
+    if (p.pago_estado === 'pendiente' && p.metodo_pago === 'efectivo') {
       html += `<button class="mini-btn pay" data-pagar="${p.id}">Marcar pagado</button>`;
-    } else if (p.pago_estado === 'aprobado') {
+    }
+    if (p.metodo_pago === 'transferencia' &&
+        ['comprobante_recibido', 'en_verificacion'].includes(p.pago_estado)) {
+      html += `<button class="mini-btn" data-revision="en_verificacion" data-id="${p.id}">En verificación</button>`;
+      html += `<button class="mini-btn pay" data-revision="aprobado" data-id="${p.id}">Confirmar pago</button>`;
+      html += `<button class="mini-btn danger" data-revision="rechazado" data-id="${p.id}">Rechazar comprobante</button>`;
+    }
+    if (p.pago_estado === 'aprobado') {
       html += `<button class="mini-btn" data-despagar="${p.id}">Quitar pago</button>`;
+    }
+    if (p.comprobante_enviado) {
+      html += `<button class="mini-btn" data-ver-comprobante="${p.id}">Ver comprobante</button>`;
     }
     if (!['entregada', 'rechazada', 'cancelada'].includes(p.estado)) {
       html += `<button class="mini-btn danger" data-id="${p.id}" data-accion="cancelar">Cancelar</button>`;
@@ -205,7 +221,12 @@
       html += `<h4>Productos del pedido</h4><div class="table-wrap"><table class="data-table"><thead><tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Observación</th><th>Subtotal</th></tr></thead><tbody>`;
       html += (p.items || []).map((i) => `<tr><td>${esc(i.nombre)}</td><td>${money(i.precio)}</td><td>${i.cantidad}</td><td>${esc(i.notas || '—')}</td><td><strong>${money(i.subtotal)}</strong></td></tr>`).join('');
       html += `</tbody></table></div><div class="order-totals"><div><span>Subtotal</span><strong>${money(p.subtotal)}</strong></div><div><span>Descuento</span><strong>${money(p.descuento)}</strong></div><div><span>Envío</span><strong>${money(p.envio)}</strong></div><div class="grand"><span>Total</span><strong>${money(p.total)}</strong></div></div>`;
-      if (p.pago) html += `<p class="small-note">Método de pago elegido: ${esc(p.pago.metodo)}. Confirmado por el administrador ${p.pago.pagado_en ? esc(String(p.pago.pagado_en).slice(0, 16)) : '—'}.</p>`;
+      if (p.pago) {
+        html += `<p class="small-note">Método de pago: ${esc(p.pago.metodo)}. Confirmado el ${p.pago.pagado_en ? esc(String(p.pago.pagado_en).slice(0, 16)) : '—'}${p.pago.confirmado_por ? ' · por administrador #' + esc(p.pago.confirmado_por) : ''}.</p>`;
+        if (p.pago.nota) html += `<div class="notice notice-warn"><span>💬</span><div><strong>Nota de la revisión</strong><br>${esc(p.pago.nota)}</div></div>`;
+      }
+      if (p.banco) html += `<p class="small-note">Banco elegido por el cliente: ${esc(p.banco)}.</p>`;
+      if (p.comprobante) html += `<p class="small-note">Comprobante: ${esc(p.comprobante.nombre)} · enviado ${esc(String(p.comprobante.enviado).slice(0, 16))}.</p>`;
       $('order-body').innerHTML = html;
       $('order-foot').innerHTML = `<div class="row-actions">${accionesPedido(p)}</div>`;
       $('order-backdrop').classList.remove('hidden');
@@ -239,6 +260,10 @@
   }
 
   document.addEventListener('click', (event) => {
+    const revision = event.target.closest('[data-revision]');
+    if (revision) { abrirRevision(Number(revision.dataset.id), revision.dataset.revision); return; }
+    const comprobante = event.target.closest('[data-ver-comprobante]');
+    if (comprobante) { verComprobante(Number(comprobante.dataset.verComprobante)); return; }
     const ver = event.target.closest('[data-ver-pedido]');
     if (ver) { showPedido(Number(ver.dataset.verPedido)); return; }
     const accion = event.target.closest('[data-accion]');
@@ -271,11 +296,204 @@
       if (anterior !== null && anterior !== actual) {
         const vistos = new Set(anterior.split(',').filter(Boolean));
         const nuevos = d.pedidos.filter((p) => !vistos.has(String(p.id)));
-        if (nuevos.length) toast(`🔔 ${nuevos.length} pedido(s) nuevo(s) · ${nuevos[0].numero}`);
+        if (nuevos.length) {
+          toast(`🔔 ${nuevos.length} pedido(s) nuevo(s) · ${nuevos[0].numero}`);
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try { new Notification('🔔 Nuevo pedido · PUNTO VIVO FRESH', {
+              body: `${nuevos[0].numero} · ${nuevos[0].cliente}`, tag: 'pvf-nuevo-pedido',
+            }); } catch (e) { /* el aviso interno ya se mostró */ }
+          }
+        }
       }
       try { sessionStorage.setItem('pv_pedidos_vistos', actual); } catch (e) { /* ignorar */ }
     } catch (e) { /* la notificación nunca interrumpe al administrador */ }
   }
+
+  // -------------------------------------------------- pagos por transferencia
+  let revisionPendiente = null;
+
+  function abrirRevision(id, decision) {
+    const nombres = {en_verificacion:'marcar como en verificación', aprobado:'confirmar el pago',
+                     rechazado:'rechazar el comprobante'};
+    revisionPendiente = {id, decision};
+    $('revision-title').textContent = nombres[decision] || 'Revisar pago';
+    $('revision-detalle').textContent = decision === 'aprobado'
+      ? 'Confirma que el dinero llegó a la cuenta bancaria antes de aprobar. La venta se contabilizará como definitiva.'
+      : 'El cliente verá esta explicación en «Mis pedidos».';
+    $('revision-nota').value = '';
+    $('revision-backdrop').classList.remove('hidden');
+    $('revision-nota').focus();
+  }
+
+  $('revision-confirmar').addEventListener('click', async () => {
+    if (!revisionPendiente) return;
+    const {id, decision} = revisionPendiente;
+    const nota = $('revision-nota').value.trim();
+    if (decision === 'rechazado' && !nota) {
+      toast('Escribe una explicación para el cliente.', true); return;
+    }
+    const boton = $('revision-confirmar');
+    boton.disabled = true;
+    try {
+      await api(`/api/admin/pedidos/${id}/revision`, {method:'PATCH', body:{decision, nota}});
+      $('revision-backdrop').classList.add('hidden');
+      toast(decision === 'aprobado' ? 'Pago confirmado y contabilizado'
+        : (decision === 'rechazado' ? 'Comprobante rechazado con explicación' : 'Pago en verificación'));
+      loadPagos(); loadPedidos(); loadResumen(); loadVentas(); loadFrecuentes(); checkPedidosNuevos();
+    } catch (e) { toast(e.message, true); }
+    finally { boton.disabled = false; revisionPendiente = null; }
+  });
+
+  async function loadPagos() {
+    try {
+      const d = await api('/api/admin/pagos/transferencias');
+      const estado = $('pago-estado').value;
+      const lista = estado ? d.pedidos.filter((p) => p.pago_estado === estado) : d.pedidos;
+      $('pagos-body').innerHTML = lista.length ? lista.map((p) => `
+        <tr><td><strong>${esc(p.numero)}</strong></td><td>${esc(p.cliente)}</td>
+        <td>${esc(p.telefono)}</td><td><strong>${money(p.total)}</strong></td>
+        <td>${esc(p.banco || '—')}</td><td>${p.comprobante_enviado ? '📎 Sí' : '—'}</td>
+        <td><small>${p.comprobante_enviado ? esc(String(p.comprobante_enviado).replace('T', ' ').slice(0, 16)) : '—'}</small></td>
+        <td>${badge(p.pago_estado, PAGOS)}${p.pago_nota ? `<br><small>${esc(p.pago_nota)}</small>` : ''}</td>
+        <td><div class="row-actions">${accionesPedido(p)}</div></td></tr>`).join('')
+        : '<tr><td colspan="9" class="muted">No hay transferencias con ese estado.</td></tr>';
+    } catch (e) { toast(e.message, true); }
+  }
+
+  $('btn-refrescar-pagos').addEventListener('click', loadPagos);
+  $('pago-estado').addEventListener('change', loadPagos);
+
+  async function verComprobante(id) {
+    try {
+      const d = await api(`/api/admin/pedidos/${id}/comprobante`);
+      $('comprobante-title').textContent = 'Comprobante · ' + esc(d.nombre);
+      const fuente = d.url || d.datos;
+      $('comprobante-body').innerHTML = `<p class="small-note">Enviado ${esc(String(d.enviado).replace('T', ' ').slice(0, 19))} · ${esc(d.tipo)} · ${(d.tamano / 1024).toFixed(0)} KB</p>` +
+        (d.tipo === 'application/pdf'
+          ? `<a class="btn btn-outline btn-sm" href="${esc(fuente)}" target="_blank" rel="noopener" download="${esc(d.nombre)}">Abrir PDF</a>`
+          : `<img class="proof-preview" src="${esc(fuente)}" alt="Comprobante del pedido">`);
+      $('comprobante-backdrop').classList.remove('hidden');
+    } catch (e) { toast(e.message, true); }
+  }
+
+  // -------------------------------------------------- configuración bancaria
+  function limpiarCuenta() {
+    ['cuenta-id', 'cuenta-banco', 'cuenta-titular', 'cuenta-numero', 'cuenta-tipo',
+     'cuenta-identificacion', 'cuenta-instrucciones'].forEach((id) => { $(id).value = ''; });
+    $('cuenta-orden').value = '0';
+    $('cuenta-activa').checked = false;
+    $('cuenta-guardar').textContent = 'Guardar cuenta';
+  }
+
+  async function loadCuentas() {
+    try {
+      const d = await api('/api/admin/pagos/cuentas');
+      $('cuentas-body').innerHTML = d.cuentas.length ? d.cuentas.map((c) => `
+        <tr><td><strong>${esc(c.banco)}</strong></td><td>${esc(c.titular || '—')}</td>
+        <td>${esc(c.numero || '—')}</td><td>${esc(c.tipo || '—')}</td>
+        <td><span class="tag ${c.activa ? '' : 'off'}">${c.activa ? 'Activa' : 'Borrador'}</span></td>
+        <td><div class="row-actions"><button class="mini-btn" data-cuenta-editar="${c.id}">Editar</button>
+        <button class="mini-btn danger" data-cuenta-borrar="${c.id}">Eliminar</button></div></td></tr>`).join('')
+        : '<tr><td colspan="6" class="muted">Aún no hay cuentas configuradas.</td></tr>';
+      $('cuentas-body').querySelectorAll('[data-cuenta-editar]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const c = d.cuentas.find((x) => Number(x.id) === Number(b.dataset.cuentaEditar));
+          if (!c) return;
+          $('cuenta-id').value = c.id;
+          $('cuenta-banco').value = c.banco;
+          $('cuenta-titular').value = c.titular;
+          $('cuenta-numero').value = c.numero;
+          $('cuenta-tipo').value = c.tipo;
+          $('cuenta-identificacion').value = c.identificacion;
+          $('cuenta-instrucciones').value = c.instrucciones;
+          $('cuenta-orden').value = c.orden;
+          $('cuenta-activa').checked = !!c.activa;
+          $('cuenta-guardar').textContent = 'Guardar cambios';
+        }));
+      $('cuentas-body').querySelectorAll('[data-cuenta-borrar]').forEach((b) =>
+        b.addEventListener('click', async () => {
+          if (!confirm('¿Eliminar esta cuenta bancaria?')) return;
+          try {
+            await api('/api/admin/pagos/cuentas/' + b.dataset.cuentaBorrar, {method:'DELETE'});
+            toast('Cuenta eliminada'); loadCuentas();
+          } catch (e) { toast(e.message, true); }
+        }));
+    } catch (e) { toast(e.message, true); }
+  }
+
+  $('cuenta-limpiar').addEventListener('click', limpiarCuenta);
+  $('cuenta-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const id = $('cuenta-id').value;
+    const body = {
+      banco: $('cuenta-banco').value.trim(), titular: $('cuenta-titular').value.trim(),
+      numero: $('cuenta-numero').value.trim(), tipo: $('cuenta-tipo').value.trim(),
+      identificacion: $('cuenta-identificacion').value.trim(),
+      instrucciones: $('cuenta-instrucciones').value.trim(),
+      activa: $('cuenta-activa').checked, orden: Number($('cuenta-orden').value) || 0,
+    };
+    if (body.activa && (!body.titular || !body.numero)) {
+      toast('Para activar la cuenta completa titular y número de cuenta.', true); return;
+    }
+    const boton = $('cuenta-guardar');
+    boton.disabled = true;
+    try {
+      await api(id ? '/api/admin/pagos/cuentas/' + id : '/api/admin/pagos/cuentas',
+        {method: id ? 'PUT' : 'POST', body});
+      toast('Cuenta guardada'); limpiarCuenta(); loadCuentas();
+    } catch (e) { toast(e.message, true); }
+    finally { boton.disabled = false; }
+  });
+
+  // -------------------------------------------------- notificaciones push
+  function urlBase64ToUint8Array(base64) {
+    const relleno = base64 + '='.repeat((4 - base64.length % 4) % 4);
+    const binario = atob(relleno.replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(binario, (c) => c.charCodeAt(0));
+  }
+
+  async function cargarEstadoPush() {
+    const texto = $('push-estado');
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      texto.textContent = 'Este navegador no admite notificaciones del sistema.'; return;
+    }
+    try {
+      const d = await api('/api/admin/push/clave');
+      if (!d.configurado) {
+        texto.textContent = 'El servidor todavía no tiene las claves de notificación configuradas.';
+        return;
+      }
+      texto.textContent = Notification.permission === 'granted'
+        ? 'Notificaciones activas. Recibirás un aviso cuando llegue un pedido nuevo.'
+        : 'Pulsa el botón para permitir las notificaciones del navegador.';
+    } catch (e) { texto.textContent = 'No se pudo consultar el estado de las notificaciones.'; }
+  }
+
+  $('push-activar').addEventListener('click', async () => {
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      toast('Este navegador no admite notificaciones del sistema.', true); return;
+    }
+    try {
+      const permiso = await Notification.requestPermission();
+      if (permiso !== 'granted') { toast('Permiso de notificaciones no concedido.', true); return; }
+      const d = await api('/api/admin/push/clave');
+      if (!d.configurado) { toast('El servidor aún no tiene configuradas las claves push.', true); return; }
+      const registro = await navigator.serviceWorker.ready;
+      let suscripcion = await registro.pushManager.getSubscription();
+      if (!suscripcion) {
+        suscripcion = await registro.pushManager.subscribe({
+          userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(d.publica),
+        });
+      }
+      const clave = suscripcion.toJSON();
+      await api('/api/admin/push/suscribir', {method:'POST', body:{
+        endpoint: suscripcion.endpoint, p256dh: clave.keys.p256dh, auth: clave.keys.auth,
+      }});
+      toast('Notificaciones activadas para este dispositivo');
+      cargarEstadoPush();
+    } catch (e) { toast(e.message, true); }
+  });
+  cargarEstadoPush();
 
   // -------------------------------------------------- ventas y clientes frecuentes
   async function loadVentas() {

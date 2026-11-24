@@ -25,7 +25,8 @@ edge-tts>=6.1,<8
 zernio-sdk>=1.4,<2
 email-validator>=2.0,<3
 
-# PUNTO VIVO FRESH (menú digital, visitas y QR)
+# PUNTO VIVO FRESH (menú digital, visitas, QR, pedidos y pagos)
 fastapi>=0.110,<1
 uvicorn>=0.27,<1
 qrcode[pil]>=8.2,<9
+pywebpush>=2,<3
