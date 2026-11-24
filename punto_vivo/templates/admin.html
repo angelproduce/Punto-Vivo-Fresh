@@ -142,7 +142,7 @@
         <div class="panel-head"><div><h2>Historial de ventas</h2><p>Pedidos pagados, sin rechazados ni cancelados</p></div>
           <a class="btn btn-outline btn-sm" href="/api/admin/exportar/ventas.csv" download>⬇ Exportar ventas (CSV)</a>
         </div>
-        <div class="table-wrap"><table class="data-table"><thead><tr><th>N.º pedido</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Total</th></tr></thead><tbody id="ventas-historial"></tbody></table></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>N.º pedido</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Total</th><th>Acciones</th></tr></thead><tbody id="ventas-historial"></tbody></table></div>
       </div>
     </section>
 
@@ -295,6 +295,19 @@
     <div class="modal-head"><h2 id="order-title">Detalle del pedido</h2><button class="icon-btn" data-close="order-backdrop">✕</button></div>
     <div class="modal-body" id="order-body"></div>
     <div class="modal-foot" id="order-foot"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop hidden" id="delete-venta-backdrop">
+  <div class="modal-card">
+    <div class="modal-head"><h2 id="delete-venta-title">Borrar venta</h2><button class="icon-btn" data-close="delete-venta-backdrop">✕</button></div>
+    <div class="modal-body">
+      <p class="small-note" id="delete-venta-detalle">Se borrará el pedido, sus artículos y su pago. No se puede deshacer.</p>
+      <form id="delete-venta-form" class="product-form">
+        <label><span id="delete-venta-password-title">Contraseña del administrador</span><input type="password" id="delete-venta-password" autocomplete="current-password" placeholder="Tu contraseña de administrador" required></label>
+        <div class="modal-foot"><button type="button" class="btn btn-outline" data-close="delete-venta-backdrop">Cancelar</button><button type="submit" class="btn btn-primary btn-danger" id="delete-venta-submit">Borrar definitivamente</button></div>
+      </form>
+    </div>
   </div>
 </div>
 

@@ -123,8 +123,8 @@
           <span class="product-cat">${esc(p.categoria)}</span>
           <h3>${esc(p.name)}</h3>
           <p class="product-desc">${esc(p.description)}</p>
+          <span class="price ${p.price_label === 'Precio por definir' ? 'small' : ''}">${esc(p.price_label)}</span>
           <div class="product-bottom">
-            <span class="price ${p.price_label === 'Precio por definir' ? 'small' : ''}">${esc(p.price_label)}</span>
             <div class="product-actions">
               <button class="btn-detail" data-id="${p.id}">Ver detalle</button>
               <button class="btn-cart-add" data-add="${p.id}" ${Number(p.price) > 0 ? '' : 'disabled title="Precio por definir"'}>🛒 Agregar</button>

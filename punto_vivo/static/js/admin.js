@@ -5,6 +5,7 @@
   const money = (v) => 'RD$ ' + Number(v || 0).toLocaleString('es-DO', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const csrf = document.querySelector('meta[name="pv-csrf"]')?.content || sessionStorage.getItem('pv_csrf') || '';
   const $ = (id) => document.getElementById(id);
+  let borrarVentaId = null;
 
   async function api(path, options = {}) {
     const opts = {...options};
@@ -303,10 +304,46 @@
         `<tr><td>${esc(c.categoria)}</td><td>${money(c.total)}</td></tr>`).join('')
         : '<tr><td colspan="2" class="muted">Aún no hay ingresos por categoría.</td></tr>';
       $('ventas-historial').innerHTML = d.historial.length ? d.historial.map((v) =>
-        `<tr><td><strong>${esc(v.numero)}</strong></td><td>${esc(v.cliente)}</td><td>${esc(String(v.fecha).replace('T', ' ').slice(0, 16))}</td><td>${badge(v.estado, ESTADOS)}</td><td>${money(v.total)}</td></tr>`).join('')
-        : '<tr><td colspan="5" class="muted">Aún no hay ventas registradas.</td></tr>';
+        `<tr><td><strong>${esc(v.numero)}</strong></td><td>${esc(v.cliente)}</td><td>${esc(String(v.fecha).replace('T', ' ').slice(0, 16))}</td><td>${badge(v.estado, ESTADOS)}</td><td>${money(v.total)}</td><td class="cell-wide"><button class="mini-btn danger" data-borrar-venta="${v.id}" type="button">🗑 Borrar venta</button></td></tr>`).join('')
+        : '<tr><td colspan="6" class="muted">Aún no hay ventas registradas.</td></tr>';
     } catch (e) { toast(e.message, true); }
   }
+
+  $('ventas-historial').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-borrar-venta]');
+    if (!btn) return;
+    borrarVentaId = Number(btn.dataset.borrarVenta);
+    const numero = btn.closest('tr')?.querySelector('strong')?.textContent || '';
+    $('delete-venta-detalle').textContent = `Pedido ${numero}: se borrarán el pedido, sus artículos y su pago. No se puede deshacer.`;
+    $('delete-venta-password').value = '';
+    $('delete-venta-backdrop').classList.remove('hidden');
+    $('delete-venta-password').focus();
+  });
+
+  $('delete-venta-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submit = $('delete-venta-submit');
+    if (submit.disabled || !borrarVentaId) return;
+    const password = $('delete-venta-password').value;
+    if (!password) { toast('Escribe tu contraseña de administrador.', true); return; }
+    submit.disabled = true;
+    submit.textContent = 'Borrando…';
+    try {
+      const d = await api(`/api/admin/pedidos/${borrarVentaId}`, {method: 'DELETE', body: {password}});
+      $('delete-venta-backdrop').classList.add('hidden');
+      toast(`Pedido ${d.numero || ''} borrado definitivamente.`);
+      loadVentas();
+      loadResumen();
+      loadPedidos();
+      loadFrecuentes();
+      checkPedidosNuevos();
+    } catch (err) { toast(err.message, true); }
+    finally {
+      submit.disabled = false;
+      submit.textContent = 'Borrar definitivamente';
+      borrarVentaId = null;
+    }
+  });
 
   async function loadFrecuentes() {
     try {

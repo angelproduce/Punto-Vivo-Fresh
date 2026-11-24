@@ -1287,6 +1287,48 @@ def get_order(order_id: int) -> dict[str, Any] | None:
     return data
 
 
+def delete_order(order_id: int) -> dict[str, Any] | None:
+    """Borra un pedido y, en cascada, sus artículos y pago. Devuelve None si no existe."""
+    if supabase_enabled():
+        row = _row('orders', {
+            'id': f'eq.{order_id}', 'select': 'id,order_number,delivery_address_id',
+        })
+        if row is None:
+            return None
+        numero = row.get('order_number', '')
+        direccion_id = row.get('delivery_address_id')
+        _delete('orders', order_id)
+        if direccion_id and not _rows('orders', {
+            'select': 'id', 'delivery_address_id': f'eq.{direccion_id}', 'limit': 1,
+        }):
+            _delete('delivery_addresses', direccion_id)
+        return {'eliminado': 1, 'numero': numero}
+
+    conn = db.connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT order_number, delivery_address_id FROM orders WHERE id = ?", (order_id,)
+        ).fetchone()
+        if row is None:
+            conn.rollback()
+            return None
+        numero = row['order_number']
+        direccion_id = row['delivery_address_id']
+        conn.execute("DELETE FROM orders WHERE id = ?", (order_id,))
+        if direccion_id and conn.execute(
+            "SELECT 1 FROM orders WHERE delivery_address_id = ? LIMIT 1", (direccion_id,)
+        ).fetchone() is None:
+            conn.execute("DELETE FROM delivery_addresses WHERE id = ?", (direccion_id,))
+        conn.commit()
+        return {'eliminado': 1, 'numero': numero}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def customer_orders(customer_id: int) -> list[dict[str, Any]]:
     if supabase_enabled():
         rows = _rows('orders', {
@@ -1400,7 +1442,7 @@ def sales_summary() -> dict[str, Any]:
             key=lambda x: -x['total'],
         ),
         'historial': [{
-            'numero': o['numero'], 'cliente': o['cliente'], 'fecha': o['creado'],
+            'id': o['id'], 'numero': o['numero'], 'cliente': o['cliente'], 'fecha': o['creado'],
             'total': o['total'], 'estado': o['estado'],
         } for o in vendidas[:20]],
         'pendientes_pago': len(pendientes),

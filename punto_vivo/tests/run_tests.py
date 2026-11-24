@@ -321,7 +321,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261123n" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124a" in _sw.text)
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -332,7 +332,7 @@ def run() -> None:
           and "state.categoria = chip.dataset.cat" in _public_js)
     check("59. Sin estilos ni caché del plegable",
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
-          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261123n" in _sw.text)
+          and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124a" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -485,6 +485,50 @@ def run() -> None:
     check("97. Cliente con pedidos no se puede eliminar", guarda_cliente.status_code == 409)
     check("98. Producto en pedidos no se puede eliminar", guarda_producto.status_code == 409)
 
+    # ---------------------------------------------------- borrar una venta con contraseña
+    check("113. Botón de borrar venta, modal y precio sobre los botones",
+          '<th>Acciones</th>' in _admin_tpl
+          and 'id="delete-venta-backdrop"' in _admin_tpl
+          and 'id="delete-venta-password"' in _admin_tpl
+          and 'data-borrar-venta=' in _admin_js
+          and "`/api/admin/pedidos/${borrarVentaId}`" in _admin_js
+          and 'colspan="6"' in _admin_js
+          and re.search(r'product-desc">\$\{esc\(p\.description\)\}</p>\s*<span class="price ', _public_js) is not None
+          and '.product-body > .price{' in _admin_css)
+
+    historial_ventas = anonimo.get("/api/admin/ventas", headers=admin_headers()).json()["historial"]
+    check("114. El historial de ventas incluye el id del pedido",
+          any(v["numero"] == num1 and v["id"] == fila["id"] for v in historial_ventas),
+          str(historial_ventas))
+
+    sin_clave = anonimo.request("DELETE", f"/api/admin/pedidos/{fila['id']}", headers=admin_headers(),
+                                json={"password": "ClaveIncorrecta123!"})
+    check("115. Contraseña incorrecta no borra la venta",
+          sin_clave.status_code == 400
+          and db.one("SELECT COUNT(*) FROM orders WHERE id=?", (fila["id"],))[0] == 1
+          and db.one("SELECT COUNT(*) FROM order_items WHERE order_id=?", (fila["id"],))[0] == 1
+          and db.one("SELECT COUNT(*) FROM payments WHERE order_id=?", (fila["id"],))[0] == 1,
+          sin_clave.text)
+
+    borrar_venta = anonimo.request("DELETE", f"/api/admin/pedidos/{fila['id']}", headers=admin_headers(),
+                                   json={"password": ADMIN_PASS})
+    ventas_despues = anonimo.get("/api/admin/ventas", headers=admin_headers()).json()
+    check("116. Contraseña correcta borra pedido, artículos y pago y recalcula ventas",
+          borrar_venta.status_code == 200 and borrar_venta.json()["numero"] == num1
+          and db.one("SELECT COUNT(*) FROM orders WHERE id=?", (fila["id"],))[0] == 0
+          and db.one("SELECT COUNT(*) FROM order_items WHERE order_id=?", (fila["id"],))[0] == 0
+          and db.one("SELECT COUNT(*) FROM payments WHERE order_id=?", (fila["id"],))[0] == 0
+          and ventas_despues["total_ventas"] == 0.0 and ventas_despues["pagadas"] == 0,
+          borrar_venta.text)
+
+    repetir_borrado = anonimo.request("DELETE", f"/api/admin/pedidos/{fila['id']}", headers=admin_headers(),
+                                      json={"password": ADMIN_PASS})
+    check("117. Borrar dos veces da 404 y no toca otros pedidos",
+          repetir_borrado.status_code == 404
+          and db.one("SELECT COUNT(*) FROM orders WHERE id=?", (fila2["id"],))[0] == 1
+          and db.one("SELECT status FROM payments WHERE order_id=?", (fila2["id"],))[0] == "reembolsado",
+          repetir_borrado.text)
+
     _menu_pedidos = client.get("/menu").text
     _public_js_pedidos = (_base_ui / "static" / "js" / "public.js").read_text(encoding="utf-8")
     check("99. Carrito y checkout presentes en el menú",
@@ -538,7 +582,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261123n" in _sw.text)
+          and "pvf-static-20261124a" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js

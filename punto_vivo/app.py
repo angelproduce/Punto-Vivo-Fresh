@@ -240,6 +240,10 @@ class OrderPaymentIn(BaseModel):
     referencia: str = ""
 
 
+class BorrarPedidoIn(BaseModel):
+    password: str
+
+
 # ------------------------------------------------------------------ páginas públicas
 
 @app.get("/", include_in_schema=False)
@@ -686,6 +690,19 @@ def api_pedido_pago(pedido_id: int, payload: OrderPaymentIn,
     if pedido is None:
         raise HTTPException(status_code=404, detail="Pedido no encontrado.")
     return pedido
+
+
+@app.delete("/api/admin/pedidos/{pedido_id}")
+def api_pedido_borrar(pedido_id: int, payload: BorrarPedidoIn,
+                      session=Depends(require_admin)) -> dict[str, Any]:
+    """Borrado definitivo de un pedido, solo tras confirmar la contraseña del admin."""
+    admin = repository.get_admin_by_email(session["email"])
+    if admin is None or not security.verify_password(payload.password, admin["password_hash"]):
+        raise HTTPException(status_code=400, detail="Contraseña incorrecta.")
+    borrado = repository.delete_order(pedido_id)
+    if borrado is None:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado.")
+    return borrado
 
 
 @app.get("/api/admin/ventas")

@@ -108,8 +108,8 @@ Reglas importantes:
 
 ## 4. Menú, carrito y panel administrativo
 
-- **Público:** búsqueda y filtros por categoría siempre visibles (todas las categorías se muestran en filas, sin deslizar), ficha de producto, botón compartir, carrito persistente con cantidades y observaciones por producto, checkout con entrega/retiro, dirección, método de pago y observaciones generales, confirmación con número de pedido y aviso de datos de demostración.
-- **Panel:** resumen con KPIs de visitas **y ventas**, gestión de pedidos (filtrar, ver detalle, aceptar, preparar, marcar listo/entregado, rechazar o cancelar, confirmar pago, exportar CSV), sección **Ventas** (ingresos de 7 días, situación de cobros, productos más vendidos, ingresos por categoría e historial), sección **Clientes frecuentes** (compras pagadas, total y promedio), perfil del cliente (visitas, pedidos, gasto y favoritos), notificación de pedidos nuevos, top de clientes, gestión de visitas, exportaciones CSV, CRUD de productos y categorías, activación/desactivación, orden y subida de fotos (redimensionadas a WebP). Las eliminaciones piden confirmación y no se pueden deshacer.
+- **Público:** búsqueda y filtros por categoría siempre visibles (todas las categorías se muestran en filas, sin deslizar), tarjetas compactas con el precio sobre los botones «Ver detalle» y «🛒 Agregar», ficha de producto, botón compartir, carrito persistente con cantidades y observaciones por producto, checkout con entrega/retiro, dirección, método de pago y observaciones generales, confirmación con número de pedido y aviso de datos de demostración.
+- **Panel:** resumen con KPIs de visitas **y ventas**, gestión de pedidos (filtrar, ver detalle, aceptar, preparar, marcar listo/entregado, rechazar o cancelar, confirmar pago, exportar CSV), sección **Ventas** (ingresos de 7 días, situación de cobros, productos más vendidos, ingresos por categoría e historial con botón **Borrar venta** que pide la contraseña del administrador sesionado), sección **Clientes frecuentes** (compras pagadas, total y promedio), perfil del cliente (visitas, pedidos, gasto y favoritos), notificación de pedidos nuevos, top de clientes, gestión de visitas, exportaciones CSV, CRUD de productos y categorías, activación/desactivación, orden y subida de fotos (redimensionadas a WebP). Las eliminaciones piden confirmación y no se pueden deshacer.
 - **QR:** descarga PNG y SVG del mismo enlace permanente al formulario de registro.
 
 Los productos iniciales son **12 ejemplos marcados como DEMO** con precio `0 = "Precio por definir"`. No son datos comerciales reales: reemplázalos desde *Administrar menú* y asigna precios reales. Los productos sin precio **no se pueden agregar al carrito** ni pedir. Las fotos de demostración se cargan desde Unsplash; si no hay internet, la interfaz muestra un ilustrador de respaldo por categoría. Puedes subir tus propias fotos desde el panel (se guardan optimizadas en `static/uploads/`).
@@ -129,6 +129,7 @@ Los cambios en productos/categorías se reflejan al recargar el menú público (
 - Los estados de pago son `pendiente`, `aprobado`, `rechazado` y `reembolsado`.
 - Los clientes ven **solo sus pedidos** desde su cookie firmada; no existe una ruta pública para consultar pedidos por ID ajeno.
 - No se puede eliminar un cliente ni un producto que aparece en pedidos (la API devuelve `409`).
+- **Borrar una venta:** en el historial de **Ventas**, el botón 🗑 pide la contraseña del administrador y elimina el pedido completo (pedido, artículos y pago). Sin la contraseña correcta no se borra nada; la petición requiere sesión admin y CSRF. Al borrarse, el pedido desaparece de Pedidos y Ventas y el resumen se recalcula. La contraseña nunca se envía por chat ni se guarda en el navegador.
 
 ---
 
@@ -170,7 +171,7 @@ set PYTHONPATH=%cd%\src;%cd%
 .venv\Scripts\python.exe -m punto_vivo.tests.run_tests
 ```
 
-Cubre 112 comprobaciones: cliente nuevo/existente, visitas, fechas/horas, doble envío, menú y QR, login/CSRF/bloqueo, productos, imágenes, CSV, PWA, carrito y checkout, validación de precios, idempotencia de pedidos, aislamiento entre clientes, estados, pago del administrador, ventas, rechazos, perfiles, frecuentes y protección de datos.
+Cubre 117 comprobaciones: cliente nuevo/existente, visitas, fechas/horas, doble envío, menú y QR, login/CSRF/bloqueo, productos, imágenes, CSV, PWA, carrito y checkout, validación de precios, idempotencia de pedidos, aislamiento entre clientes, estados, pago del administrador, ventas, rechazos, borrado de ventas con contraseña, perfiles, frecuentes y protección de datos.
 
 ---
 

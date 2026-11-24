@@ -152,4 +152,4 @@ Te pedirá la contraseña de forma segura. No pegues la service_role en el chat 
 
 - En tu PC, `python -m punto_vivo` sigue usando **SQLite + `static/uploads/`** en el puerto **8790** si no defines `PV_SUPABASE_*`.
 - El generador sigue en el puerto **8765** con FFmpeg, modelos y redes sociales intactos.
-- El registro, el menú y la administración siguen iguales; además están las rutas de pedidos, pagos, ventas y clientes frecuentes, con las mismas validaciones en SQLite y Supabase.
+- El registro, el menú y la administración siguen iguales; además están las rutas de pedidos, pagos, ventas y clientes frecuentes, con las mismas validaciones en SQLite y Supabase. El borrado de una venta usa `DELETE /api/admin/pedidos/{id}` con la contraseña del administrador en el cuerpo, y exige sesión y CSRF.
