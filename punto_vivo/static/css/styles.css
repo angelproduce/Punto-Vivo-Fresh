@@ -185,10 +185,15 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
 .public-footer{border-top:1px solid var(--linea);background:#fff;padding:28px 22px;text-align:center}
 .public-footer .brand{justify-content:center;margin-bottom:8px}
 .public-footer p{font-size:12px;color:var(--muted);margin:0}
-.dialog-product{max-width:min(92vw,680px);position:relative}
+.dialog-product{max-width:min(92vw,680px)}
+/* Centro de la ventana, no del documento: en Safari/iOS un dialog modal con
+   margin:auto puede aparecer arriba cuando la página está desplazada. */
+dialog.dialog-product,dialog.dialog-image{position:fixed;top:50%;left:50%;bottom:auto;right:auto;transform:translate(-50%,-50%);margin:0}
+.dialog-image{width:min(96vw,980px);max-width:min(96vw,980px);max-height:94dvh;padding:10px;overflow:auto}
+.dialog-image img{display:block;width:auto;height:auto;max-width:100%;max-height:88dvh;margin:0 auto;border-radius:12px}
 .dialog-close{position:absolute;right:15px;top:15px;z-index:2;border:0;border-radius:50%;width:34px;height:34px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.15);font-size:15px}
 .product-detail-img{background:var(--verde-claro);display:grid;place-items:center;font-size:56px;padding:8px;overflow:hidden}
-.product-detail-img img{display:block;width:auto;height:auto;max-width:100%;max-height:min(40vh,240px);object-fit:contain;object-position:center;margin:0 auto}
+.product-detail-img img{display:block;width:auto;height:auto;max-width:100%;max-height:min(40vh,240px);object-fit:contain;object-position:center;margin:0 auto;cursor:zoom-in}
 .product-detail-content{padding:24px}
 .product-detail-content h2{margin:0 0 6px;font-size:26px}
 .product-detail-content .price{font-size:22px;display:block;margin:14px 0}
@@ -377,7 +382,7 @@ body.pv-mobile .btn-detail{min-height:36px}
 body.pv-mobile .public-footer{padding:18px 12px}
 body.pv-mobile .public-footer .brand-mark{width:34px;height:34px;border-radius:10px;font-size:17px}
 body.pv-mobile .public-footer p{font-size:11px}
-body.pv-mobile dialog.dialog-product{width:min(92vw,430px);max-width:min(92vw,430px);max-height:82dvh;margin:auto;border-radius:18px;overflow:auto}
+body.pv-mobile dialog.dialog-product{width:min(92vw,430px);max-width:min(92vw,430px);max-height:82dvh;border-radius:18px;overflow:auto}
 body.pv-mobile .product-detail-img{font-size:44px}
 body.pv-mobile .product-detail-content{padding:16px}
 body.pv-mobile .product-detail-content h2{font-size:22px}
@@ -501,7 +506,7 @@ body.pv-desktop .form-grid{grid-template-columns:1fr 1fr}
   .login-card{padding:24px;border-radius:18px}
   .login-heading h1{font-size:25px}
   .dialog{max-width:none;width:100%;margin:auto 0 0;border-radius:18px 18px 0 0;border-bottom:0}
-  dialog.dialog-product{width:min(92vw,430px);max-width:min(92vw,430px);max-height:82dvh;margin:auto;border-radius:18px;overflow:auto}
+  dialog.dialog-product{width:min(92vw,430px);max-width:min(92vw,430px);max-height:82dvh;border-radius:18px;overflow:auto}
   .toast{left:12px;right:12px;max-width:none;text-align:center}
 }
 

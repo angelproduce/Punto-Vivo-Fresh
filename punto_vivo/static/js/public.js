@@ -110,7 +110,7 @@
   function detailImageHtml(item) {
     const icon = fallbackIcon[item.categoria] || '🍽️';
     if (!item.image) return `<div class="product-detail-img fallback">${icon}</div>`;
-    return `<div class="product-detail-img"><img src="${esc(item.image)}" alt="${esc(item.name)}" decoding="async"
+    return `<div class="product-detail-img"><img src="${esc(item.image)}" alt="${esc(item.name)}" title="Toca para ampliar" decoding="async"
       onerror="var p=this.parentElement;this.remove();p.classList.add('fallback');p.textContent='${icon}'"></div>`;
   }
 
@@ -176,11 +176,20 @@
         else { await navigator.clipboard.writeText(url); toast('Enlace del producto copiado'); }
       } catch (e) { /* usuario canceló */ }
     });
+    detail.querySelector('.product-detail-img img')?.addEventListener('click', (e) => {
+      const ampliada = document.getElementById('image-zoom');
+      ampliada.src = e.currentTarget.src;
+      ampliada.alt = e.currentTarget.alt;
+      document.getElementById('image-dialog').showModal();
+    });
     dialog.showModal();
   }
 
   document.getElementById('close-product').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  const imageDialog = document.getElementById('image-dialog');
+  document.getElementById('close-image').addEventListener('click', () => imageDialog.close());
+  imageDialog.addEventListener('click', (e) => { if (e.target === imageDialog) imageDialog.close(); });
   document.getElementById('search').addEventListener('input', (e) => { state.q = e.target.value; render(); });
 
   document.getElementById('share-menu').addEventListener('click', async () => {

@@ -325,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124l" in _sw.text
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124m" in _sw.text
           and "'/static/audio/alerta.wav'" in _sw.text
           and "sound: '/static/audio/alerta.wav'" in _sw.text
           and (_base_ui / "static" / "audio" / "alerta.wav").exists())
@@ -344,7 +344,7 @@ def run() -> None:
           and "pvf-static-20261124f" not in _sw.text and "pvf-static-20261124g" not in _sw.text
           and "pvf-static-20261124h" not in _sw.text and "pvf-static-20261124i" not in _sw.text
           and "pvf-static-20261124j" not in _sw.text and "pvf-static-20261124k" not in _sw.text
-          and "pvf-static-20261124l" in _sw.text)
+          and "pvf-static-20261124l" not in _sw.text and "pvf-static-20261124m" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -834,14 +834,19 @@ def run() -> None:
           and "success-close').addEventListener('click', async" in _public_js_pedidos
           and "subirComprobante(ultimoPedido.pedido_id, archivo, estadoEl)" in _public_js_pedidos
           and "y pulsa Listo para enviarlo" in _menu_pedidos)
-    check("99b. La foto del detalle carga completa y sin recorte",
+    check("99b. Ficha centrada y foto ampliable al tocarla",
           "function detailImageHtml(item)" in _public_js_pedidos
           and "${detailImageHtml(p)}" in _public_js_pedidos
           and 'class="product-detail-img"><img src=' in _public_js_pedidos
           and ".product-detail-img img{display:block;width:auto;height:auto;max-width:100%;max-height:min(40vh,240px);object-fit:contain" in _admin_css
           and "body.pv-mobile .product-detail-img img{width:auto;height:auto;max-width:100%;max-height:min(28dvh,180px);object-fit:contain" in _admin_css
-          and "body.pv-mobile dialog.dialog-product{width:min(92vw,430px);max-width:min(92vw,430px);max-height:82dvh;margin:auto;border-radius:18px;overflow:auto}" in _admin_css
-          and "dialog.dialog-product{width:min(92vw,430px);max-width:min(92vw,430px);max-height:82dvh;margin:auto;border-radius:18px;overflow:auto}" in _admin_css
+          and "dialog.dialog-product,dialog.dialog-image{position:fixed;top:50%;left:50%;bottom:auto;right:auto;transform:translate(-50%,-50%);margin:0}" in _admin_css
+          and "body.pv-mobile dialog.dialog-product{width:min(92vw,430px);max-width:min(92vw,430px);max-height:82dvh;border-radius:18px;overflow:auto}" in _admin_css
+          and "dialog.dialog-product{width:min(92vw,430px);max-width:min(92vw,430px);max-height:82dvh;border-radius:18px;overflow:auto}" in _admin_css
+          and 'id="image-dialog"' in _menu_pedidos
+          and 'id="image-zoom"' in _menu_pedidos
+          and "close-image').addEventListener('click'" in _public_js_pedidos
+          and ".product-detail-img img')?.addEventListener('click'" in _public_js_pedidos
           and "loading=\"lazy\"" not in _public_js_pedidos.split("function detailImageHtml")[1].split("function render")[0])
     check("100. Secciones PEDIDOS, VENTAS y CLIENTES FRECUENTES",
           'data-section="pedidos"' in _admin_tpl and 'data-section="ventas"' in _admin_tpl
@@ -890,7 +895,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261124l" in _sw.text)
+          and "pvf-static-20261124m" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js
