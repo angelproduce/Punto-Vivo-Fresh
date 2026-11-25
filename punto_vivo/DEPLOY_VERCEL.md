@@ -167,7 +167,7 @@ Te pedirá la contraseña de forma segura. No pegues la service_role en el chat 
 5. Solo los pedidos con pago `aprobado` cuentan como venta. El cliente ve el estado y la nota en **Mis pedidos**.
 6. Opcionalmente, activa las notificaciones del navegador desde **CONFIGURACIÓN DE PAGOS**. El botón emergente interno sigue funcionando aunque no haya permiso o claves VAPID.
 
-El service worker usa la caché `pvf-static-20261124k` y atiende los eventos `push` y `notificationclick` para abrir el panel al pulsar el aviso.
+El service worker usa la caché `pvf-static-20261124l` y atiende los eventos `push` y `notificationclick` para abrir el panel al pulsar el aviso.
 
 ---
 
