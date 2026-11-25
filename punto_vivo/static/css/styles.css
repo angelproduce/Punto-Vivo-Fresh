@@ -187,8 +187,8 @@ form label:not(.consent):not(.check-label){display:block;font-weight:700;font-si
 .public-footer p{font-size:12px;color:var(--muted);margin:0}
 .dialog-product{max-width:min(92vw,680px);position:relative}
 .dialog-close{position:absolute;right:15px;top:15px;z-index:2;border:0;border-radius:50%;width:34px;height:34px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.15);font-size:15px}
-.product-detail-img{height:280px;background:var(--verde-claro);display:grid;place-items:center;font-size:80px;overflow:hidden}
-.product-detail-img img{width:100%;height:100%;object-fit:contain;object-position:center;display:block}
+.product-detail-img{background:var(--verde-claro);display:grid;place-items:center;font-size:80px;padding:8px;overflow:hidden}
+.product-detail-img img{display:block;width:auto;height:auto;max-width:100%;max-height:min(70vh,560px);object-fit:contain;object-position:center;margin:0 auto}
 .product-detail-content{padding:24px}
 .product-detail-content h2{margin:0 0 6px;font-size:26px}
 .product-detail-content .price{font-size:22px;display:block;margin:14px 0}
@@ -378,7 +378,7 @@ body.pv-mobile .public-footer{padding:18px 12px}
 body.pv-mobile .public-footer .brand-mark{width:34px;height:34px;border-radius:10px;font-size:17px}
 body.pv-mobile .public-footer p{font-size:11px}
 body.pv-mobile dialog.dialog-product{width:100%;max-width:none;max-height:92dvh;margin:auto 0 0;border-radius:18px 18px 0 0;border-bottom:0;overflow:auto}
-body.pv-mobile .product-detail-img{height:180px;font-size:58px}
+body.pv-mobile .product-detail-img{font-size:58px}
 body.pv-mobile .product-detail-content{padding:16px}
 body.pv-mobile .product-detail-content h2{font-size:22px}
 body.pv-mobile .toast{left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));max-width:none;text-align:center}
@@ -662,10 +662,10 @@ body.pv-mobile .cobro-row strong{text-align:left}
 .proof-preview{max-width:100%;max-height:320px;border:1px solid var(--linea);border-radius:11px;display:block;margin:10px 0}
 #cuentas-body td{overflow-wrap:anywhere}
 
-/* Detalle de producto compacto en móvil: imagen grande, texto sin espacios de más. */
+/* Detalle de producto compacto en móvil: foto completa, texto sin espacios de más. */
 body.pv-mobile dialog.dialog-product{max-height:90dvh}
-body.pv-mobile .product-detail-img{height:min(56vw,260px);min-height:180px}
-body.pv-mobile .product-detail-img img{object-fit:contain;object-position:center}
+body.pv-mobile .product-detail-img{padding:6px}
+body.pv-mobile .product-detail-img img{width:auto;height:auto;max-width:100%;max-height:min(55dvh,420px);object-fit:contain;object-position:center}
 body.pv-mobile .product-detail-content{padding:12px 14px 16px}
 body.pv-mobile .product-detail-content h2{font-size:19px;margin:2px 0}
 body.pv-mobile .product-detail-content .price{display:inline-block;font-size:18px;margin:6px 0}
