@@ -838,23 +838,28 @@ def api_pedido_revision(pedido_id: int, payload: PaymentReviewIn,
 
 
 @app.get("/api/admin/pedidos/{pedido_id}/comprobante")
-def api_comprobante_admin(pedido_id: int, session=Depends(require_admin)) -> dict[str, Any]:
+def api_comprobante_admin(pedido_id: int, datos: bool = False,
+                          session=Depends(require_admin)) -> dict[str, Any]:
     """Comprobante privado: nunca se sirve desde /static ni sin sesión admin."""
     proof = repository.get_payment_proof(pedido_id)
     if proof is None:
         raise HTTPException(status_code=404, detail="Este pedido no tiene comprobante.")
-    datos = ''
+    contenido_base64 = ''
     url = ''
-    try:
-        url = storage.signed_proof_url(proof['ruta'])
-        if not url:
+    if not datos:
+        try:
+            url = storage.signed_proof_url(proof['ruta'])
+        except Exception:
+            url = ''  # Si falla la firma, se sirve el archivo por la API.
+    if not url:
+        try:
             contenido = storage.read_private_file(proof['ruta'])
-            datos = 'data:' + proof['tipo'] + ';base64,' + base64.b64encode(contenido).decode('ascii')
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail="No se pudo leer el comprobante.") from exc
+            contenido_base64 = 'data:' + proof['tipo'] + ';base64,' + base64.b64encode(contenido).decode('ascii')
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail="No se pudo leer el comprobante.") from exc
     return {
         'nombre': proof['nombre'], 'tipo': proof['tipo'], 'tamano': proof['tamano'],
-        'enviado': proof['enviado'], 'url': url, 'datos': datos,
+        'enviado': proof['enviado'], 'url': url, 'datos': contenido_base64,
     }
 
 

@@ -84,11 +84,24 @@ def delete_private_file(path: str) -> None:
 
 
 def signed_proof_url(path: str, expires_in: int = 300) -> str:
-    """URL temporal para el administrador; vacía en local (se sirve por API)."""
+    """URL temporal para el administrador; vacía en local (se sirve por API).
+
+    Supabase devuelve ``signedURL`` como una ruta relativa del tipo
+    ``/object/sign/bucket/archivo?token=...``. Esa ruta debe anteponerse con
+    ``<SUPABASE_URL>/storage/v1``; si solo se antepone el dominio, el navegador
+    pide ``/object/sign/...`` y la imagen del comprobante nunca carga.
+    """
     if not supabase_enabled():
         return ''
     respuesta = supabase_request(
         "POST", f"/storage/v1/object/sign/{path}", json={"expiresIn": expires_in}
     ).json()
     url = respuesta.get("signedURL") or respuesta.get("signedUrl") or ''
-    return (SUPABASE_URL + url) if url.startswith('/') else url
+    if not url:
+        return ''
+    if url.startswith(('http://', 'https://')):
+        return url
+    base = SUPABASE_URL.rstrip('/')
+    if url.startswith('/storage/v1/'):
+        return base + url
+    return base + '/storage/v1' + (url if url.startswith('/') else '/' + url)

@@ -325,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124h" in _sw.text
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124i" in _sw.text
           and "'/static/audio/alerta.wav'" in _sw.text
           and "sound: '/static/audio/alerta.wav'" in _sw.text
           and (_base_ui / "static" / "audio" / "alerta.wav").exists())
@@ -342,7 +342,7 @@ def run() -> None:
           and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124c" not in _sw.text
           and "pvf-static-20261124d" not in _sw.text and "pvf-static-20261124e" not in _sw.text
           and "pvf-static-20261124f" not in _sw.text and "pvf-static-20261124g" not in _sw.text
-          and "pvf-static-20261124h" in _sw.text)
+          and "pvf-static-20261124h" not in _sw.text and "pvf-static-20261124i" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -685,6 +685,36 @@ def run() -> None:
           and detalle_admin.json().get("comprobante", {}).get("nombre") == "comprobante.png",
           archivo.text)
 
+    # La URL firmada de Supabase viene como /object/sign/... y necesita /storage/v1.
+    _enabled_original = storage.supabase_enabled
+    _request_original = storage.supabase_request
+    class _FirmaFalsa:
+        def __init__(self, url): self._url = url
+        def json(self): return {"signedURL": self._url}
+    try:
+        storage.supabase_enabled = lambda: True
+        storage.supabase_request = lambda *a, **k: _FirmaFalsa(
+            "/object/sign/comprobantes/prueba.png?token=abc")
+        esperado = storage.SUPABASE_URL.rstrip('/') + "/storage/v1/object/sign/comprobantes/prueba.png?token=abc"
+        check("133b. URL firmada relativa incluye /storage/v1",
+              storage.signed_proof_url("comprobantes/prueba.png") == esperado)
+        storage.supabase_request = lambda *a, **k: _FirmaFalsa(
+            "/storage/v1/object/sign/comprobantes/prueba.png?token=abc")
+        check("133c. URL firmada no duplica /storage/v1",
+              storage.signed_proof_url("comprobantes/prueba.png") == esperado)
+        storage.supabase_request = lambda *a, **k: _FirmaFalsa(
+            "https://ejemplo.supabase.co/storage/v1/object/sign/x?token=abc")
+        check("133d. URL firmada absoluta se respeta",
+              storage.signed_proof_url("comprobantes/prueba.png") ==
+              "https://ejemplo.supabase.co/storage/v1/object/sign/x?token=abc")
+    finally:
+        storage.supabase_enabled = _enabled_original
+        storage.supabase_request = _request_original
+    check("133e. El panel tiene respaldo base64 si falla la imagen",
+          "imagen.addEventListener('error'" in _admin_js
+          and "/comprobante?datos=1" in _admin_js
+          and "if (resp.datos) imagen.src = resp.datos" in _admin_js)
+
     revision = anonimo.patch(f"/api/admin/pedidos/{tid}/revision", headers=admin_headers(),
                              json={"decision": "en_verificacion", "nota": "Revisando depósito"})
     auditado = db.one("SELECT reviewed_by, reviewed_at, review_note, confirmed_by "
@@ -849,7 +879,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261124h" in _sw.text)
+          and "pvf-static-20261124i" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js

@@ -441,11 +441,26 @@
       comprobanteActualId = id;
       const d = await api(`/api/admin/pedidos/${id}/comprobante`);
       $('comprobante-title').textContent = 'Comprobante · ' + esc(d.nombre);
-      const fuente = d.url || d.datos;
-      $('comprobante-body').innerHTML = `<p class="small-note">Enviado ${esc(String(d.enviado).replace('T', ' ').slice(0, 19))} · ${esc(d.tipo)} · ${(d.tamano / 1024).toFixed(0)} KB</p>` +
-        (d.tipo === 'application/pdf'
-          ? `<a class="btn btn-outline btn-sm" href="${esc(fuente)}" target="_blank" rel="noopener" download="${esc(d.nombre)}">Abrir PDF</a>`
-          : `<img class="proof-preview" src="${esc(fuente)}" alt="Comprobante del pedido">`);
+      const meta = `<p class="small-note">Enviado ${esc(String(d.enviado).replace('T', ' ').slice(0, 19))} · ${esc(d.tipo)} · ${(d.tamano / 1024).toFixed(0)} KB</p>`;
+      const cuerpo = $('comprobante-body');
+      if (d.tipo === 'application/pdf') {
+        const fuente = d.url || d.datos;
+        cuerpo.innerHTML = meta +
+          `<a class="btn btn-outline btn-sm" href="${esc(fuente)}" target="_blank" rel="noopener" download="${esc(d.nombre)}">Abrir PDF</a>`;
+      } else {
+        cuerpo.innerHTML = meta +
+          `<img class="proof-preview" src="${esc(d.datos || d.url)}" alt="Comprobante del pedido">`;
+        const imagen = cuerpo.querySelector('img');
+        if (imagen) imagen.addEventListener('error', async () => {
+          if (imagen.dataset.respaldo) return;
+          imagen.dataset.respaldo = '1';
+          try {
+            const resp = await api(`/api/admin/pedidos/${id}/comprobante?datos=1`);
+            if (resp.datos) imagen.src = resp.datos;
+            else imagen.alt = 'No se pudo cargar el comprobante.';
+          } catch (e) { imagen.alt = 'No se pudo cargar el comprobante.'; }
+        }, { once: true });
+      }
       $('comprobante-backdrop').classList.remove('hidden');
     } catch (e) { toast(e.message, true); }
   }

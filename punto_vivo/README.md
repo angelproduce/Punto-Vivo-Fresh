@@ -124,7 +124,7 @@ Los cambios en productos/categorías se reflejan al recargar el menú público (
 
 - El cliente elige entre **efectivo** y **transferencia bancaria**; «tarjeta» ya no está disponible. **No puede marcarlo como pagado**: el pago queda `pendiente` hasta que el administrador verifique y confirme el cobro en el panel.
 - Para transferir, el negocio configura sus cuentas en **CONFIGURACIÓN DE PAGOS**. Los borradores iniciales (Banco Popular, BHD y Banreservas) no tienen titular ni número inventados: solo se muestran al cliente cuando están completos y activos.
-- El cliente puede subir un comprobante JPG/JPEG/PNG/PDF de hasta **5 MB** justo al confirmar el pedido —lo selecciona y pulsa **Listo** para enviarlo— o después desde **🧾 Mis pedidos**. El archivo se guarda en almacenamiento privado (`state/comprobantes/` en local, bucket privado `comprobantes` en Supabase) y solo lo lee el administrador mediante una URL firmada o la API.
+- El cliente puede subir un comprobante JPG/JPEG/PNG/PDF de hasta **5 MB** justo al confirmar el pedido —lo selecciona y pulsa **Listo** para enviarlo— o después desde **🧾 Mis pedidos**. El archivo se guarda en almacenamiento privado (`state/comprobantes/` en local, bucket privado `comprobantes` en Supabase) y solo lo lee el administrador mediante una URL firmada válida (con `/storage/v1`) o, si esa imagen falla, mediante un respaldo en base64 servido por la API.
 - **Subir una imagen nunca confirma el pago**: pasa a `comprobante_recibido`. El administrador puede ponerlo `en_verificacion`, `aprobado` o `rechazado`, siempre con sesión y CSRF. Se guarda quién confirmó (`confirmed_by`) y cuándo (`confirmed_at`), y la doble confirmación se bloquea.
 - El administrador puede **borrar un comprobante** desde la fila del pedido o desde la vista del archivo; se pide su contraseña, se elimina el archivo privado y su registro, y el estado del pago **no cambia** (debe revisarlo de nuevo antes de confirmar). Borrar un pedido elimina también su comprobante. La contraseña incorrecta devuelve `400` y repetir la eliminación devuelve `404`.
 - Una venta definitiva es un pedido con pago `aprobado` y estado distinto de `rechazada`/`cancelada`. Si se rechaza o cancela un pedido ya pagado, el pago pasa a `reembolsado` y deja de contar.
@@ -181,7 +181,7 @@ set PYTHONPATH=%cd%\src;%cd%
 .venv\Scripts\python.exe -m punto_vivo.tests.run_tests
 ```
 
-Cubre 158 comprobaciones: cliente nuevo/existente, visitas, fechas/horas, doble envío, menú y QR, login/CSRF/bloqueo, productos, imágenes, CSV, PWA, carrito y checkout, validación de precios, idempotencia de pedidos, aislamiento entre clientes, estados, pago del administrador, ventas, rechazos, borrado de pedidos y ventas con contraseña, borrado de comprobantes con contraseña, perfiles, frecuentes, cierre de sesión del cliente, protección de datos y el flujo completo de transferencias (cuentas, comprobantes privados, estados de pago, auditoría, doble confirmación y notificaciones).
+Cubre 162 comprobaciones: cliente nuevo/existente, visitas, fechas/horas, doble envío, menú y QR, login/CSRF/bloqueo, productos, imágenes, CSV, PWA, carrito y checkout, validación de precios, idempotencia de pedidos, aislamiento entre clientes, estados, pago del administrador, ventas, rechazos, borrado de pedidos y ventas con contraseña, borrado de comprobantes con contraseña, perfiles, frecuentes, cierre de sesión del cliente, protección de datos y el flujo completo de transferencias (cuentas, comprobantes privados, estados de pago, auditoría, doble confirmación y notificaciones).
 
 ---
 
