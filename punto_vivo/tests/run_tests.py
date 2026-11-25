@@ -325,7 +325,10 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124f" in _sw.text)
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124g" in _sw.text
+          and "'/static/audio/alerta.wav'" in _sw.text
+          and "sound: '/static/audio/alerta.wav'" in _sw.text
+          and (_base_ui / "static" / "audio" / "alerta.wav").exists())
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -338,7 +341,7 @@ def run() -> None:
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
           and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124c" not in _sw.text
           and "pvf-static-20261124d" not in _sw.text and "pvf-static-20261124e" not in _sw.text
-          and "pvf-static-20261124f" in _sw.text)
+          and "pvf-static-20261124f" not in _sw.text and "pvf-static-20261124g" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -770,7 +773,12 @@ def run() -> None:
     clave_push = anonimo.get("/api/admin/push/clave", headers=admin_headers())
     check("141. Consulta de clave push sin exponer secretos",
           clave_push.status_code == 200 and isinstance(clave_push.json()["configurado"], bool)
-          and "private" not in clave_push.text.lower(), clave_push.text)
+          and "private" not in clave_push.text.lower()
+          and "function sonarAlarma()" in _admin_js
+          and "AudioContext" in _admin_js
+          and "sonarAlarma();" in _admin_js
+          and "sound: '/static/audio/alerta.wav'" in _admin_js,
+          clave_push.text)
     suscripcion = {"endpoint": "https://ejemplo.invalid/push/prueba-unica",
                    "p256dh": "clave-publica-de-prueba", "auth": "secreto-de-prueba"}
     alta_push = anonimo.post("/api/admin/push/suscribir", headers=admin_headers(),
@@ -835,7 +843,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261124f" in _sw.text)
+          and "pvf-static-20261124g" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js

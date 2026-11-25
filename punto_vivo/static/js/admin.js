@@ -9,6 +9,38 @@
   let borrarComprobanteId = null;
   let borrarModo = 'pedido';
   let comprobanteActualId = null;
+  let ctxAlarma = null;
+
+  // Alarma fuerte para pedidos nuevos. El primer clic del administrador
+  // habilita el audio, como exigen los navegadores.
+  function contextoAlarma() {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!ctxAlarma) ctxAlarma = new AudioCtx();
+    if (ctxAlarma.state === 'suspended') ctxAlarma.resume().catch(() => {});
+    return ctxAlarma;
+  }
+
+  function sonarAlarma() {
+    const ctx = contextoAlarma();
+    if (!ctx) return;
+    const inicio = ctx.currentTime;
+    [[880, 0, 0.14], [1175, 0.20, 0.14], [1568, 0.40, 0.22]].forEach(([frecuencia, retardo, duracion]) => {
+      const osc = ctx.createOscillator();
+      const vol = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = frecuencia;
+      vol.gain.setValueAtTime(0.0001, inicio + retardo);
+      vol.gain.exponentialRampToValueAtTime(0.95, inicio + retardo + 0.02);
+      vol.gain.exponentialRampToValueAtTime(0.0001, inicio + retardo + duracion);
+      osc.connect(vol).connect(ctx.destination);
+      osc.start(inicio + retardo);
+      osc.stop(inicio + retardo + duracion + 0.02);
+    });
+  }
+
+  ['pointerdown', 'keydown'].forEach((evento) =>
+    document.addEventListener(evento, () => { contextoAlarma(); }, { once: true, passive: true }));
 
   async function api(path, options = {}) {
     const opts = {...options};
@@ -336,10 +368,12 @@
         const vistos = new Set(anterior.split(',').filter(Boolean));
         const nuevos = d.pedidos.filter((p) => !vistos.has(String(p.id)));
         if (nuevos.length) {
+          sonarAlarma();
           toast(`🔔 ${nuevos.length} pedido(s) nuevo(s) · ${nuevos[0].numero}`);
           if ('Notification' in window && Notification.permission === 'granted') {
             try { new Notification('🔔 Nuevo pedido · PUNTO VIVO FRESH', {
               body: `${nuevos[0].numero} · ${nuevos[0].cliente}`, tag: 'pvf-nuevo-pedido',
+              sound: '/static/audio/alerta.wav', requireInteraction: true,
             }); } catch (e) { /* el aviso interno ya se mostró */ }
           }
         }
@@ -514,6 +548,7 @@
   }
 
   $('push-activar').addEventListener('click', async () => {
+    contextoAlarma();
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
       toast('Este navegador no admite notificaciones del sistema.', true); return;
     }
