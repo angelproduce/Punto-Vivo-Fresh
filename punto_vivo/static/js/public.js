@@ -499,6 +499,8 @@
     let data = {};
     try { data = await res.json(); } catch (e) { /* respuesta vacía */ }
     if (!res.ok) throw new Error(data.detail || 'No se pudo subir el comprobante.');
+    const entrada = document.getElementById('success-proof-file');
+    if (entrada && entrada.files[0] === archivo) entrada.value = '';
     if (estadoEl) estadoEl.textContent = 'Comprobante recibido. El negocio debe verificar la transferencia.';
     toast('Comprobante enviado. El pago sigue pendiente de verificación.');
     if (window.pvRecargarMisPedidos) window.pvRecargarMisPedidos();
@@ -604,7 +606,23 @@
     }
   });
 
-  document.getElementById('success-close').addEventListener('click', () => successDialog.close());
+  document.getElementById('success-close').addEventListener('click', async (event) => {
+    const boton = event.currentTarget;
+    if (!ultimoPedido || !ultimoPedido.pedido_id) { successDialog.close(); return; }
+    const archivo = document.getElementById('success-proof-file').files[0];
+    if (!archivo) { successDialog.close(); return; }
+    const estadoEl = document.getElementById('success-proof-estado');
+    boton.disabled = true;
+    try {
+      await subirComprobante(ultimoPedido.pedido_id, archivo, estadoEl);
+      successDialog.close();
+    } catch (err) {
+      estadoEl.textContent = err.message || 'No se pudo enviar el comprobante.';
+      toast(err.message, true);
+    } finally {
+      boton.disabled = false;
+    }
+  });
   successDialog.addEventListener('click', (e) => { if (e.target === successDialog) successDialog.close(); });
   document.getElementById('success-mis-pedidos').addEventListener('click', () => {
     successDialog.close();

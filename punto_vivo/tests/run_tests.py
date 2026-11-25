@@ -325,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124g" in _sw.text
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124h" in _sw.text
           and "'/static/audio/alerta.wav'" in _sw.text
           and "sound: '/static/audio/alerta.wav'" in _sw.text
           and (_base_ui / "static" / "audio" / "alerta.wav").exists())
@@ -341,7 +341,8 @@ def run() -> None:
           ".filter-panel[hidden]" not in _admin_css and ".filter-toggle" not in _admin_css
           and "pvf-static-20261123i" not in _sw.text and "pvf-static-20261124c" not in _sw.text
           and "pvf-static-20261124d" not in _sw.text and "pvf-static-20261124e" not in _sw.text
-          and "pvf-static-20261124f" not in _sw.text and "pvf-static-20261124g" in _sw.text)
+          and "pvf-static-20261124f" not in _sw.text and "pvf-static-20261124g" not in _sw.text
+          and "pvf-static-20261124h" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -795,7 +796,12 @@ def run() -> None:
     check("99. Carrito y checkout presentes en el menú",
           'id="cart-button"' in _menu_pedidos and 'id="cart-dialog"' in _menu_pedidos
           and 'id="checkout-dialog"' in _menu_pedidos and 'data-add=' in _public_js_pedidos
-          and "/api/pedido" in _public_js_pedidos)
+          and "/api/pedido" in _public_js_pedidos
+          and 'id="success-proof-file"' in _menu_pedidos
+          and 'id="success-close"' in _menu_pedidos
+          and "success-close').addEventListener('click', async" in _public_js_pedidos
+          and "subirComprobante(ultimoPedido.pedido_id, archivo, estadoEl)" in _public_js_pedidos
+          and "y pulsa Listo para enviarlo" in _menu_pedidos)
     check("100. Secciones PEDIDOS, VENTAS y CLIENTES FRECUENTES",
           'data-section="pedidos"' in _admin_tpl and 'data-section="ventas"' in _admin_tpl
           and 'data-section="frecuentes"' in _admin_tpl
@@ -843,7 +849,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261124g" in _sw.text)
+          and "pvf-static-20261124h" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js
