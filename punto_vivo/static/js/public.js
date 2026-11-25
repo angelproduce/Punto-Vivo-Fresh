@@ -105,6 +105,15 @@
       onerror="var p=this.parentElement;this.remove();p.classList.add('fallback');p.textContent='${icon}'"></div>`;
   }
 
+  // En el detalle la foto se carga en cuanto se abre el modal: `loading="lazy"`
+  // deja la imagen en blanco dentro de un <dialog> oculto en Safari/iOS.
+  function detailImageHtml(item) {
+    const icon = fallbackIcon[item.categoria] || '🍽️';
+    if (!item.image) return `<div class="product-detail-img fallback">${icon}</div>`;
+    return `<div class="product-detail-img"><img src="${esc(item.image)}" alt="${esc(item.name)}" decoding="async"
+      onerror="var p=this.parentElement;this.remove();p.classList.add('fallback');p.textContent='${icon}'"></div>`;
+  }
+
   function render() {
     const q = state.q.trim().toLowerCase();
     const items = state.productos.filter((p) =>
@@ -139,7 +148,7 @@
     const p = state.productos.find((x) => x.id === id);
     if (!p) return;
     detail.innerHTML = `
-      ${imageHtml(p, 'product-detail-img')}
+      ${detailImageHtml(p)}
       <div class="product-detail-content">
         ${p.is_demo ? '<span class="tag demo">DATO DE DEMOSTRACIÓN</span>' : ''}
         <span class="product-cat">${esc(p.categoria)}</span>
