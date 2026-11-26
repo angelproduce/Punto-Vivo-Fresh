@@ -6,10 +6,18 @@ el aviso interno de siempre: la notificación nunca puede romper un pedido.
 """
 from __future__ import annotations
 
+import base64
 import json
 import time
 from typing import Any
 from urllib.parse import urlparse
+
+try:
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+except Exception:  # la validación es opcional; pywebpush ya trae cryptography
+    ec = None
+    serialization = None
 
 try:
     from pywebpush import WebPushException, webpush
@@ -45,6 +53,23 @@ def notificar_prueba() -> dict[str, Any]:
     })
 
 
+def _claves_coinciden() -> bool:
+    """Comprueba que la pública corresponde a la privada sin mostrar ninguna."""
+    publica, privada = config.vapid_keys()
+    if not (publica and privada and ec is not None and serialization is not None):
+        return False
+    try:
+        relleno = '=' * ((4 - len(privada) % 4) % 4)
+        semilla = base64.urlsafe_b64decode(privada + relleno)
+        clave = ec.derive_private_key(int.from_bytes(semilla, 'big'), ec.SECP256R1())
+        derivada = clave.public_key().public_bytes(
+            serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
+        calculada = base64.urlsafe_b64encode(derivada).rstrip(b'=').decode()
+        return calculada == publica
+    except Exception:
+        return False
+
+
 def estado() -> dict[str, Any]:
     """Datos seguros para diagnosticar el panel: nunca incluye endpoints ni claves."""
     suscripciones = repository.listar_suscripciones_push()
@@ -52,8 +77,11 @@ def estado() -> dict[str, Any]:
     for suscripcion in suscripciones:
         host = (urlparse(suscripcion["endpoint"]).hostname or "desconocido").lower()
         destinos[host] = destinos.get(host, 0) + 1
+    subject = config.VAPID_SUBJECT.strip()
     return {
         "configurado": configurado(),
+        "claves_coinciden": _claves_coinciden(),
+        "subject_valido": subject.startswith('https://') or subject.startswith('mailto:'),
         "suscripciones": len(suscripciones),
         "destinos": destinos,
     }

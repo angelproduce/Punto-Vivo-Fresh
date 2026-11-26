@@ -680,7 +680,9 @@
       return `${nombre}: ${total}`;
     }).join(', ') || 'ninguno';
     const permiso = ('Notification' in window) ? Notification.permission : 'no disponible';
-    diag.textContent = `Diagnóstico · Servidor: ${servidor.configurado ? 'claves listas' : 'sin claves'}. `
+    diag.textContent = `Diagnóstico · Servidor: ${servidor.configurado ? 'claves listas' : 'sin claves'}, `
+      + `par ${servidor.claves_coinciden ? 'correcto' : 'INCORRECTO'}, `
+      + `remitente ${servidor.subject_valido ? 'válido' : 'INVÁLIDO'}. `
       + `Dispositivos registrados: ${servidor.suscripciones} (${destinos}). `
       + `Aquí: permiso ${permiso}, ${instalada ? 'app instalada' : 'pestaña'}, `
       + `${suscrito ? 'suscrito' : 'sin suscripción'}, ${registro ? 'service worker activo' : 'sin service worker'}.`;
@@ -747,6 +749,27 @@
         ? `Notificación de prueba enviada a ${d.enviados} dispositivo(s)`
         : 'No hay dispositivos registrados o faltan las claves push.', !d.enviados);
     } catch (e) { toast(e.message, true); }
+  });
+
+  // Prueba real en segundo plano: se envía en cuanto la app deja de estar visible.
+  let pruebaAlMinimizar = false;
+  $('push-probar-fondo')?.addEventListener('click', () => {
+    pruebaAlMinimizar = true;
+    const diag = $('push-diagnostico');
+    if (diag) {
+      diag.textContent = 'Prueba preparada: minimiza la app ahora. El aviso se enviará al salir de la pantalla.';
+      diag.hidden = false;
+    }
+    toast('Minimiza la app: el aviso se enviará al salir');
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden || !pruebaAlMinimizar) return;
+    pruebaAlMinimizar = false;
+    try {
+      fetch('/api/admin/push/probar', {
+        method: 'POST', keepalive: true, headers: {'X-CSRF-Token': csrf},
+      }).catch(() => {});
+    } catch (e) { /* la página se está suspendiendo */ }
   });
 
   $('push-activar').addEventListener('click', async () => {
