@@ -325,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261126c" in _sw.text
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261126d" in _sw.text
           and "'/static/audio/alerta-fuerte.wav'" in _sw.text
           and "sound: '/static/audio/alerta-fuerte.wav'" in _sw.text
           and "silent: false" in _sw.text
@@ -347,7 +347,7 @@ def run() -> None:
           and "pvf-static-20261124j" not in _sw.text and "pvf-static-20261124k" not in _sw.text
           and "pvf-static-20261124l" not in _sw.text and "pvf-static-20261124m" not in _sw.text
           and "pvf-static-20261126a" not in _sw.text and "pvf-static-20261126b" not in _sw.text
-          and "pvf-static-20261126c" in _sw.text)
+          and "pvf-static-20261126c" not in _sw.text and "pvf-static-20261126d" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -856,13 +856,23 @@ def run() -> None:
           "function esAppleMovil()" in _admin_js
           and "function panelInstalado()" in _admin_js
           and "navigator.standalone === true" in _admin_js
-          and "if (esAppleMovil() && !panelInstalado())" in _admin_js
+          and "const apple = esAppleMovil();" in _admin_js
+          and "if (apple && !instalada)" in _admin_js
           and "botonActivar.disabled = true" in _admin_js
           and "if (!clavePush) clavePush = await api('/api/admin/push/clave');" in _admin_js
           and "registroPush.pushManager.subscribe({" in _admin_js
           and "Notification.requestPermission()" not in _admin_js
           and "Ajustes → Notificaciones → Panel PVF" in _admin_js
           and "Abrir como app web" in _install_js)
+    estado_push = anonimo.get("/api/admin/push/estado", headers=admin_headers())
+    check("146. Diagnóstico push sin exponer secretos",
+          estado_push.status_code == 200
+          and {'configurado', 'suscripciones', 'destinos'} <= set(estado_push.json())
+          and 'id="push-diagnostico"' in _admin_tpl
+          and "/api/admin/push/estado" in _admin_js
+          and "Última prueba:" in _admin_js
+          and "def estado()" in (_base_ui / "push.py").read_text(encoding="utf-8")
+          and "endpoint" not in estado_push.text.lower(), estado_push.text)
 
     _menu_pedidos = client.get("/menu").text
     _public_js_pedidos = (_base_ui / "static" / "js" / "public.js").read_text(encoding="utf-8")
@@ -936,7 +946,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261126c" in _sw.text)
+          and "pvf-static-20261126d" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js

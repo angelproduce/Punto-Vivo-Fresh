@@ -924,11 +924,16 @@ def api_push_clave(session=Depends(require_admin)) -> dict[str, Any]:
     return {'publica': publica, 'configurado': bool(publica)}
 
 
+@app.get("/api/admin/push/estado")
+def api_push_estado(session=Depends(require_admin)) -> dict[str, Any]:
+    """Estado de las notificaciones sin exponer endpoints ni secretos."""
+    return push.estado()
+
+
 @app.post("/api/admin/push/probar")
 def api_push_probar(session=Depends(require_admin)) -> dict[str, Any]:
     """Envía un aviso de prueba a los dispositivos suscritos del administrador."""
-    enviados = push.notificar_prueba()
-    return {'ok': True, 'enviados': enviados}
+    return {'ok': True, **push.notificar_prueba()}
 
 
 @app.post("/api/admin/push/suscribir")

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import time
 from typing import Any
+from urllib.parse import urlparse
 
 try:
     from pywebpush import WebPushException, webpush
@@ -31,10 +32,10 @@ def notificar_nuevo_pedido(numero: str, cliente: str, total: Any) -> int:
         "body": f"{numero} · {cliente} · RD$ {total}",
         "url": "/admin?section=pedidos",
         "tag": f"pvf-{numero}",
-    })
+    })["enviados"]
 
 
-def notificar_prueba() -> int:
+def notificar_prueba() -> dict[str, Any]:
     """Aviso de prueba para comprobar el centro de notificaciones del dispositivo."""
     return _enviar({
         "title": "🔔 Prueba · PUNTO VIVO FRESH",
@@ -44,13 +45,33 @@ def notificar_prueba() -> int:
     })
 
 
-def _enviar(cuerpo: dict[str, Any]) -> int:
-    if not configurado():
-        return 0
+def estado() -> dict[str, Any]:
+    """Datos seguros para diagnosticar el panel: nunca incluye endpoints ni claves."""
+    suscripciones = repository.listar_suscripciones_push()
+    destinos: dict[str, int] = {}
+    for suscripcion in suscripciones:
+        host = (urlparse(suscripcion["endpoint"]).hostname or "desconocido").lower()
+        destinos[host] = destinos.get(host, 0) + 1
+    return {
+        "configurado": configurado(),
+        "suscripciones": len(suscripciones),
+        "destinos": destinos,
+    }
+
+
+def _enviar(cuerpo: dict[str, Any]) -> dict[str, Any]:
+    suscripciones = repository.listar_suscripciones_push()
+    resultado: dict[str, Any] = {
+        "configurado": configurado(),
+        "suscripciones": len(suscripciones),
+        "enviados": 0,
+        "errores": 0,
+    }
+    if not resultado["configurado"]:
+        return resultado
     _, privada = config.vapid_keys()
     datos = json.dumps(cuerpo)
-    enviados = 0
-    for suscripcion in repository.listar_suscripciones_push():
+    for suscripcion in suscripciones:
         try:
             webpush(
                 subscription_info={
@@ -66,12 +87,13 @@ def _enviar(cuerpo: dict[str, Any]) -> int:
                 timeout=5,
             )
             repository.marcar_suscripcion_push(suscripcion["id"])
-            enviados += 1
+            resultado["enviados"] += 1
         except Exception as exc:
+            resultado["errores"] += 1
             if WebPushException is not None and isinstance(exc, WebPushException):
                 respuesta = getattr(exc, "response", None)
                 if respuesta is not None and getattr(respuesta, "status_code", 0) in (404, 410):
                     repository.borrar_suscripcion_push(suscripcion["id"])
             # Un fallo de notificación jamás debe afectar al pedido confirmado.
             continue
-    return enviados
+    return resultado

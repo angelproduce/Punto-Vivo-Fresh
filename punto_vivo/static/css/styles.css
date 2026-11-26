@@ -256,6 +256,7 @@ dialog.dialog-product,dialog.dialog-image{position:fixed;top:50%;left:50%;bottom
 .panel-head h2{font-size:17px;margin:0 0 3px}
 .panel-head p{font-size:12px;color:var(--muted);margin:0}
 .volumen-alerta{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
+.push-diagnostico{margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--muted);background:rgba(11,59,46,.05);border-radius:10px;padding:8px 10px}
 .volumen-alerta-titulo{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
 .volumen-alerta-titulo span{font-size:12px;font-weight:800;color:var(--verde-oscuro)}
 .volumen-botones{display:flex;flex-wrap:wrap;gap:8px}

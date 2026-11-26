@@ -671,12 +671,39 @@
       || window.matchMedia('(display-mode: fullscreen)').matches;
   }
 
+  function mostrarDiagnostico(servidor, registro, suscrito, instalada) {
+    const diag = $('push-diagnostico');
+    if (!diag) return;
+    const destinos = Object.entries(servidor.destinos || {}).map(([host, total]) => {
+      const nombre = host.includes('apple') ? 'iPhone/iPad'
+        : host.includes('google') ? 'Android' : host;
+      return `${nombre}: ${total}`;
+    }).join(', ') || 'ninguno';
+    const permiso = ('Notification' in window) ? Notification.permission : 'no disponible';
+    diag.textContent = `Diagnóstico · Servidor: ${servidor.configurado ? 'claves listas' : 'sin claves'}. `
+      + `Dispositivos registrados: ${servidor.suscripciones} (${destinos}). `
+      + `Aquí: permiso ${permiso}, ${instalada ? 'app instalada' : 'pestaña'}, `
+      + `${suscrito ? 'suscrito' : 'sin suscripción'}, ${registro ? 'service worker activo' : 'sin service worker'}.`;
+    diag.hidden = false;
+  }
+
   async function cargarEstadoPush() {
     const texto = $('push-estado');
     const botonActivar = $('push-activar');
     const botonProbar = $('push-probar');
+    const apple = esAppleMovil();
+    const instalada = panelInstalado();
+    let servidor = {configurado: false, suscripciones: 0, destinos: {}};
+    let registro = null;
+    let suscrito = false;
+    try { servidor = await api('/api/admin/push/estado'); } catch (e) { /* se muestra sin datos */ }
+    try {
+      if ('serviceWorker' in navigator) registro = await navigator.serviceWorker.getRegistration();
+      if (registro) suscrito = Boolean(await registro.pushManager.getSubscription());
+    } catch (e) { /* aún no hay service worker */ }
+    mostrarDiagnostico(servidor, registro, suscrito, instalada);
     // iOS solo permite Web Push en la app abierta desde la pantalla de inicio.
-    if (esAppleMovil() && !panelInstalado()) {
+    if (apple && !instalada) {
       texto.textContent = 'En iPhone, pulsa «Instalar panel», ábrelo desde la pantalla de inicio y activa las notificaciones allí.';
       if (botonActivar) botonActivar.disabled = true;
       if (botonProbar) botonProbar.disabled = true;
@@ -693,11 +720,10 @@
         texto.textContent = 'El servidor todavía no tiene las claves de notificación configuradas.';
         return;
       }
-      const suscrito = Boolean(await registroPush.pushManager.getSubscription());
       if (botonActivar) botonActivar.disabled = false;
       if (botonProbar) botonProbar.disabled = false;
       if (Notification.permission === 'denied') {
-        texto.textContent = esAppleMovil()
+        texto.textContent = apple
           ? 'Permiso bloqueado. En Ajustes → Notificaciones → Panel PVF activa Notificaciones y Sonidos; luego vuelve a abrir el panel.'
           : 'Permiso bloqueado. Actívalo en los ajustes del navegador y vuelve a entrar al panel.';
       } else if (Notification.permission === 'granted' && suscrito) {
@@ -711,6 +737,12 @@
   $('push-probar')?.addEventListener('click', async () => {
     try {
       const d = await api('/api/admin/push/probar', {method: 'POST'});
+      const diag = $('push-diagnostico');
+      if (diag) {
+        diag.textContent = `Última prueba: ${d.enviados} entrega(s) de ${d.suscripciones} dispositivo(s), `
+          + `${d.errores} error(es). ${d.configurado ? '' : 'Servidor sin claves VAPID.'}`;
+        diag.hidden = false;
+      }
       toast(d.enviados
         ? `Notificación de prueba enviada a ${d.enviados} dispositivo(s)`
         : 'No hay dispositivos registrados o faltan las claves push.', !d.enviados);
