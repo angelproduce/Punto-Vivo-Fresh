@@ -325,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261126a" in _sw.text
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261126b" in _sw.text
           and "'/static/audio/alerta-fuerte.wav'" in _sw.text
           and "sound: '/static/audio/alerta-fuerte.wav'" in _sw.text
           and "silent: false" in _sw.text
@@ -346,7 +346,7 @@ def run() -> None:
           and "pvf-static-20261124h" not in _sw.text and "pvf-static-20261124i" not in _sw.text
           and "pvf-static-20261124j" not in _sw.text and "pvf-static-20261124k" not in _sw.text
           and "pvf-static-20261124l" not in _sw.text and "pvf-static-20261124m" not in _sw.text
-          and "pvf-static-20261126a" in _sw.text)
+          and "pvf-static-20261126a" not in _sw.text and "pvf-static-20261126b" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -835,6 +835,22 @@ def run() -> None:
           alta_push.status_code == 200 and baja_push.status_code == 200
           and db.one("SELECT COUNT(*) FROM admin_push_subscriptions WHERE endpoint=?",
                      (suscripcion["endpoint"],))[0] == 0, f"{alta_push.text} {baja_push.text}")
+    check("143. Aviso de pedido abajo a la derecha en escritorio",
+          'id="aviso-pedido"' in _admin_tpl and 'id="aviso-pedido-texto"' in _admin_tpl
+          and 'id="aviso-ver"' in _admin_tpl and 'id="aviso-cerrar"' in _admin_tpl
+          and ".aviso-pedido{position:fixed;right:24px;bottom:24px" in _admin_css
+          and "body.pv-mobile .aviso-pedido{display:none}" in _admin_css
+          and "function mostrarAvisoPedido(nuevos)" in _admin_js
+          and "mostrarAvisoPedido(nuevos);" in _admin_js)
+    prueba_push = anonimo.post("/api/admin/push/probar", headers=admin_headers())
+    check("144. Notificación de prueba al centro de notificaciones",
+          prueba_push.status_code == 200 and prueba_push.json().get('ok') is True
+          and 'enviados' in prueba_push.json()
+          and 'id="push-probar"' in _admin_tpl
+          and "/api/admin/push/probar" in _admin_js
+          and "def notificar_prueba()" in (_base_ui / "push.py").read_text(encoding="utf-8")
+          and "«Enviar notificación de prueba»" in _admin_js,
+          prueba_push.text)
 
     _menu_pedidos = client.get("/menu").text
     _public_js_pedidos = (_base_ui / "static" / "js" / "public.js").read_text(encoding="utf-8")
@@ -908,7 +924,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261126a" in _sw.text)
+          and "pvf-static-20261126b" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js

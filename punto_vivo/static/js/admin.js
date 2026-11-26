@@ -142,10 +142,39 @@
     const el = $('toast');
     el.textContent = text;
     el.style.background = error ? '#a32828' : '';
+    if (!(document.body.classList.contains('pv-mobile') || window.innerWidth <= 700)) {
+      const aviso = $('aviso-pedido');
+      el.style.bottom = aviso && !aviso.hidden ? '190px' : '';
+    } else { el.style.bottom = ''; }
     el.hidden = false;
     clearTimeout(el._timer);
     el._timer = setTimeout(() => { el.hidden = true; }, 3200);
   }
+
+  // Aviso fijo abajo a la derecha en escritorio; en móvil manda el centro de notificaciones.
+  function mostrarAvisoPedido(nuevos) {
+    const el = $('aviso-pedido');
+    if (!el) return;
+    const detalle = `${nuevos[0].numero} · ${nuevos[0].cliente}`;
+    $('aviso-pedido-texto').textContent = detalle + (nuevos.length > 1 ? ` y ${nuevos.length - 1} más` : '');
+    const avisoToast = $('toast');
+    if (avisoToast) avisoToast.hidden = true;
+    el.hidden = false;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.hidden = true; }, 15000);
+  }
+  $('aviso-cerrar')?.addEventListener('click', () => {
+    const el = $('aviso-pedido');
+    clearTimeout(el._timer);
+    el.hidden = true;
+  });
+  $('aviso-ver')?.addEventListener('click', () => {
+    const el = $('aviso-pedido');
+    clearTimeout(el._timer);
+    el.hidden = true;
+    $('nav-pedidos')?.click();
+    loadPedidos();
+  });
 
   // En móvil cada fila se convierte en tarjeta: las celdas necesitan su etiqueta.
   function etiquetarTablas() {
@@ -448,7 +477,10 @@
         const nuevos = d.pedidos.filter((p) => !vistos.has(String(p.id)));
         if (nuevos.length) {
           sonarAlarma();
-          toast(`🔔 ${nuevos.length} pedido(s) nuevo(s) · ${nuevos[0].numero}`);
+          mostrarAvisoPedido(nuevos);
+          if (document.body.classList.contains('pv-mobile') || window.innerWidth <= 700) {
+            toast(`🔔 ${nuevos.length} pedido(s) nuevo(s) · ${nuevos[0].numero}`);
+          }
           if ('Notification' in window && Notification.permission === 'granted') {
             try { new Notification('🔔 Nuevo pedido · PUNTO VIVO FRESH', {
               body: `${nuevos[0].numero} · ${nuevos[0].cliente}`,
@@ -636,11 +668,34 @@
         texto.textContent = 'El servidor todavía no tiene las claves de notificación configuradas.';
         return;
       }
-      texto.textContent = Notification.permission === 'granted'
-        ? 'Notificaciones activas. Prueba la alarma aquí; en segundo plano el sonido depende del volumen del teléfono.'
-        : 'Pulsa el botón para permitir las notificaciones del navegador.';
+      let suscrito = false;
+      try {
+        const registro = await navigator.serviceWorker.getRegistration();
+        suscrito = Boolean(registro && await registro.pushManager.getSubscription());
+      } catch (e) { /* aún no hay service worker */ }
+      const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const instalada = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      if (Notification.permission === 'denied') {
+        texto.textContent = 'Permiso bloqueado. Actívalo en los ajustes del navegador y vuelve a entrar al panel.';
+      } else if (esIOS && !instalada) {
+        texto.textContent = 'En iPhone, pulsa «Instalar panel» y ábrelo desde la pantalla de inicio para recibir avisos.';
+      } else if (Notification.permission === 'granted' && suscrito) {
+        texto.textContent = 'Activo en este dispositivo. Pulsa «Enviar notificación de prueba» para comprobarlo.';
+      } else {
+        texto.textContent = 'Pulsa «Activar notificaciones» para registrar este dispositivo.';
+      }
     } catch (e) { texto.textContent = 'No se pudo consultar el estado de las notificaciones.'; }
   }
+
+  $('push-probar')?.addEventListener('click', async () => {
+    try {
+      const d = await api('/api/admin/push/probar', {method: 'POST'});
+      toast(d.enviados
+        ? `Notificación de prueba enviada a ${d.enviados} dispositivo(s)`
+        : 'No hay dispositivos registrados o faltan las claves push.', !d.enviados);
+    } catch (e) { toast(e.message, true); }
+  });
 
   $('push-activar').addEventListener('click', async () => {
     contextoAlarma();

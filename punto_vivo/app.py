@@ -924,6 +924,13 @@ def api_push_clave(session=Depends(require_admin)) -> dict[str, Any]:
     return {'publica': publica, 'configurado': bool(publica)}
 
 
+@app.post("/api/admin/push/probar")
+def api_push_probar(session=Depends(require_admin)) -> dict[str, Any]:
+    """Envía un aviso de prueba a los dispositivos suscritos del administrador."""
+    enviados = push.notificar_prueba()
+    return {'ok': True, 'enviados': enviados}
+
+
 @app.post("/api/admin/push/suscribir")
 def api_push_suscribir(payload: PushSubscriptionIn,
                        session=Depends(require_admin)) -> dict[str, Any]:

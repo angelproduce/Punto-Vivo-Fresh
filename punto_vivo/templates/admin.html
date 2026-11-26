@@ -45,6 +45,13 @@
 
     <div id="toast" class="toast" hidden></div>
 
+    <div id="aviso-pedido" class="aviso-pedido" hidden>
+      <button type="button" class="aviso-cerrar" id="aviso-cerrar" aria-label="Cerrar aviso">✕</button>
+      <strong>🔔 Pedido nuevo</strong>
+      <p id="aviso-pedido-texto"></p>
+      <button type="button" class="btn btn-primary btn-sm" id="aviso-ver">Ver pedidos</button>
+    </div>
+
     <!-- ---------------------------------------------------- RESUMEN -->
     <section class="admin-section is-active" id="section-resumen">
       <div class="stat-grid">
@@ -173,7 +180,10 @@
           </div>
           <button type="button" class="btn btn-primary btn-sm" id="probar-sonido">▶️ Probar sonido</button>
         </div>
-        <button class="btn btn-primary btn-sm" id="push-activar" type="button">🔔 Activar notificaciones</button>
+        <div class="form-row">
+          <button class="btn btn-primary btn-sm" id="push-activar" type="button">🔔 Activar notificaciones</button>
+          <button class="btn btn-outline btn-sm" id="push-probar" type="button">📲 Enviar notificación de prueba</button>
+        </div>
       </div>
     </section>
 

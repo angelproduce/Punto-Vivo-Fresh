@@ -7,6 +7,7 @@ el aviso interno de siempre: la notificación nunca puede romper un pedido.
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 try:
@@ -25,15 +26,29 @@ def configurado() -> bool:
 
 def notificar_nuevo_pedido(numero: str, cliente: str, total: Any) -> int:
     """Avisa a todos los administradores suscritos. Devuelve los envíos logrados."""
-    if not configurado():
-        return 0
-    _, privada = config.vapid_keys()
-    cuerpo = json.dumps({
+    return _enviar({
         "title": "🔔 Nuevo pedido · PUNTO VIVO FRESH",
         "body": f"{numero} · {cliente} · RD$ {total}",
         "url": "/admin?section=pedidos",
         "tag": f"pvf-{numero}",
     })
+
+
+def notificar_prueba() -> int:
+    """Aviso de prueba para comprobar el centro de notificaciones del dispositivo."""
+    return _enviar({
+        "title": "🔔 Prueba · PUNTO VIVO FRESH",
+        "body": "Las notificaciones están activas en este dispositivo.",
+        "url": "/admin?section=config-pagos",
+        "tag": f"pvf-prueba-{int(time.time())}",
+    })
+
+
+def _enviar(cuerpo: dict[str, Any]) -> int:
+    if not configurado():
+        return 0
+    _, privada = config.vapid_keys()
+    datos = json.dumps(cuerpo)
     enviados = 0
     for suscripcion in repository.listar_suscripciones_push():
         try:
@@ -45,7 +60,7 @@ def notificar_nuevo_pedido(numero: str, cliente: str, total: Any) -> int:
                         "auth": suscripcion["auth"],
                     },
                 },
-                data=cuerpo,
+                data=datos,
                 vapid_private_key=privada,
                 vapid_claims={"sub": config.VAPID_SUBJECT},
                 timeout=5,
