@@ -112,6 +112,10 @@ def _enviar(cuerpo: dict[str, Any]) -> dict[str, Any]:
                 data=datos,
                 vapid_private_key=privada,
                 vapid_claims={"sub": config.VAPID_SUBJECT},
+                # Apple exige TTL positivo: con el 0 de pywebpush descarta el
+                # aviso si la app web no está activa en ese instante.
+                ttl=3600,
+                headers={"Urgency": "high"},
                 timeout=5,
             )
             repository.marcar_suscripcion_push(suscripcion["id"])

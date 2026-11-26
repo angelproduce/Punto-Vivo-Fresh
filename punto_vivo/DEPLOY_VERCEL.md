@@ -167,7 +167,7 @@ Te pedirá la contraseña de forma segura. No pegues la service_role en el chat 
 5. Solo los pedidos con pago `aprobado` cuentan como venta. El cliente ve el estado y la nota en **Mis pedidos**.
 6. Opcionalmente, activa las notificaciones del navegador desde **CONFIGURACIÓN DE PAGOS**. El botón emergente interno sigue funcionando aunque no haya permiso o claves VAPID.
 
-El service worker usa la caché `pvf-static-20261126e` y atiende los eventos `push` y `notificationclick` para abrir el panel al pulsar el aviso. En iPhone el panel debe abrirse desde la pantalla de inicio (iOS 26: «Abrir como app web» activado); el permiso se pide con `pushManager.subscribe()` dentro del toque en «Activar notificaciones», nunca desde una pestaña de Safari.
+El service worker usa la caché `pvf-static-20261126f` y atiende los eventos `push` y `notificationclick` para abrir el panel al pulsar el aviso. El servidor envía los avisos con `TTL: 3600` y `Urgency: high`: Apple descarta los mensajes con `TTL: 0` cuando la app web no está recibiendo en ese instante. En iPhone el panel debe abrirse desde la pantalla de inicio (iOS 26: «Abrir como app web» activado); el permiso se pide con `pushManager.subscribe()` dentro del toque en «Activar notificaciones», nunca desde una pestaña de Safari.
 
 ---
 
