@@ -1119,39 +1119,62 @@
   $('cat-cancel').addEventListener('click', resetCategoria);
 
   // -------------------------------------------------- productos
+  let productosCache = [];
+  let productoFiltro = '';
+  const sinTildes = (v) => String(v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  function renderProductos() {
+    const q = sinTildes(productoFiltro).trim();
+    const lista = q ? productosCache.filter((p) =>
+      sinTildes(`${p.name} ${p.categoria} ${p.description}`).includes(q)) : productosCache;
+    const body = $('productos-body');
+    body.innerHTML = lista.length ? lista.map((p) => `
+      <tr>
+        <td>${p.image ? `<img class="product-thumb" src="${esc(p.image)}" alt="" loading="lazy">` : '<div class="product-thumb"></div>'}</td>
+        <td><strong>${esc(p.name)}</strong><br>${p.is_demo ? '<span class="tag demo">DEMO</span>' : ''}</td>
+        <td><small>${esc(p.categoria)}</small></td>
+        <td>${p.is_demo && Number(p.price) === 0 ? '<small>Por definir</small>' : 'RD$ ' + Number(p.price).toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
+        <td><button class="mini-btn" data-toggle="${p.id}" data-value="${p.available}">${p.available ? 'Visible' : 'Oculto'}</button></td>
+        <td><div class="row-actions">
+          <button class="mini-btn" data-up="${p.id}" title="Subir en el orden">↑</button>
+          <button class="mini-btn" data-down="${p.id}" title="Bajar en el orden">↓</button>
+          <button class="mini-btn" data-prod-edit="${p.id}">Editar</button>
+          <button class="mini-btn danger" data-prod-del="${p.id}">Eliminar</button>
+        </div></td>
+      </tr>`).join('') : `<tr><td colspan="6" class="muted">${productosCache.length ? 'No hay productos que coincidan con la búsqueda.' : 'No hay productos. Crea el primero.'}</td></tr>`;
+
+    body.querySelectorAll('[data-toggle]').forEach((b) => b.addEventListener('click', async () => {
+      try { await api(`/api/admin/productos/${b.dataset.toggle}/estado`, {method:'PATCH', body:{available: b.dataset.value !== '1'}}); loadProductos(); }
+      catch (e) { toast(e.message, true); }
+    }));
+    body.querySelectorAll('[data-up]').forEach((b) => b.addEventListener('click', () => mover(Number(b.dataset.up), -1)));
+    body.querySelectorAll('[data-down]').forEach((b) => b.addEventListener('click', () => mover(Number(b.dataset.down), 1)));
+    body.querySelectorAll('[data-prod-edit]').forEach((b) => b.addEventListener('click', () => openProducto(lista.find((p) => p.id === Number(b.dataset.prodEdit)))));
+    body.querySelectorAll('[data-prod-del]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar este producto?')) return;
+      try { await api('/api/admin/productos/' + b.dataset.prodDel, {method:'DELETE'}); toast('Producto eliminado'); loadProductos(); }
+      catch (e) { toast(e.message, true); }
+    }));
+  }
+
   async function loadProductos() {
     try {
       const d = await api('/api/admin/productos');
-      $('productos-body').innerHTML = d.productos.length ? d.productos.map((p) => `
-        <tr>
-          <td>${p.image ? `<img class="product-thumb" src="${esc(p.image)}" alt="" loading="lazy">` : '<div class="product-thumb"></div>'}</td>
-          <td><strong>${esc(p.name)}</strong><br>${p.is_demo ? '<span class="tag demo">DEMO</span>' : ''}</td>
-          <td><small>${esc(p.categoria)}</small></td>
-          <td>${p.is_demo && Number(p.price) === 0 ? '<small>Por definir</small>' : 'RD$ ' + Number(p.price).toLocaleString('es-DO', {minimumFractionDigits:2})}</td>
-          <td><button class="mini-btn" data-toggle="${p.id}" data-value="${p.available}">${p.available ? 'Visible' : 'Oculto'}</button></td>
-          <td><div class="row-actions">
-            <button class="mini-btn" data-up="${p.id}" title="Subir en el orden">↑</button>
-            <button class="mini-btn" data-down="${p.id}" title="Bajar en el orden">↓</button>
-            <button class="mini-btn" data-prod-edit="${p.id}">Editar</button>
-            <button class="mini-btn danger" data-prod-del="${p.id}">Eliminar</button>
-          </div></td>
-        </tr>`).join('') : '<tr><td colspan="6" class="muted">No hay productos. Crea el primero.</td></tr>';
-
-      const body = $('productos-body');
-      body.querySelectorAll('[data-toggle]').forEach((b) => b.addEventListener('click', async () => {
-        try { await api(`/api/admin/productos/${b.dataset.toggle}/estado`, {method:'PATCH', body:{available: b.dataset.value !== '1'}}); loadProductos(); }
-        catch (e) { toast(e.message, true); }
-      }));
-      body.querySelectorAll('[data-up]').forEach((b) => b.addEventListener('click', () => mover(Number(b.dataset.up), -1)));
-      body.querySelectorAll('[data-down]').forEach((b) => b.addEventListener('click', () => mover(Number(b.dataset.down), 1)));
-      body.querySelectorAll('[data-prod-edit]').forEach((b) => b.addEventListener('click', () => openProducto(d.productos.find((p) => p.id === Number(b.dataset.prodEdit)))));
-      body.querySelectorAll('[data-prod-del]').forEach((b) => b.addEventListener('click', async () => {
-        if (!confirm('¿Eliminar este producto?')) return;
-        try { await api('/api/admin/productos/' + b.dataset.prodDel, {method:'DELETE'}); toast('Producto eliminado'); loadProductos(); }
-        catch (e) { toast(e.message, true); }
-      }));
+      productosCache = d.productos;
+      renderProductos();
     } catch (e) { toast(e.message, true); }
   }
+
+  $('producto-q')?.addEventListener('input', (e) => {
+    productoFiltro = e.target.value;
+    renderProductos();
+  });
+  $('producto-limpiar')?.addEventListener('click', () => {
+    productoFiltro = '';
+    const input = $('producto-q');
+    if (input) { input.value = ''; input.focus(); }
+    renderProductos();
+  });
 
   async function mover(id, delta) {
     const list = await api('/api/admin/productos');

@@ -325,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261126g" in _sw.text
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261126h" in _sw.text
           and "'/static/audio/alerta-fuerte.wav'" in _sw.text
           and "sound: '/static/audio/alerta-fuerte.wav'" in _sw.text
           and "silent: false" in _sw.text
@@ -349,7 +349,7 @@ def run() -> None:
           and "pvf-static-20261126a" not in _sw.text and "pvf-static-20261126b" not in _sw.text
           and "pvf-static-20261126c" not in _sw.text and "pvf-static-20261126d" not in _sw.text
           and "pvf-static-20261126e" not in _sw.text and "pvf-static-20261126f" not in _sw.text
-          and "pvf-static-20261126g" in _sw.text)
+          and "pvf-static-20261126g" not in _sw.text and "pvf-static-20261126h" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -891,6 +891,15 @@ def run() -> None:
     check("148. Vercel instala la librería push desde pyproject.toml",
           "pywebpush>=2,<3" in _pyproject
           and "Vercel instala desde pyproject.toml" in _pyproject)
+    check("149. Buscador de productos en administración",
+          'id="producto-q"' in _admin_tpl
+          and 'id="producto-limpiar"' in _admin_tpl
+          and 'placeholder="Buscar producto, categoría o descripción"' in _admin_tpl
+          and "let productosCache = []" in _admin_js
+          and "let productoFiltro = ''" in _admin_js
+          and "normalize('NFD')" in _admin_js
+          and "productosCache.filter((p)" in _admin_js
+          and "No hay productos que coincidan con la búsqueda." in _admin_js)
 
     _menu_pedidos = client.get("/menu").text
     _public_js_pedidos = (_base_ui / "static" / "js" / "public.js").read_text(encoding="utf-8")
@@ -964,7 +973,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261126g" in _sw.text)
+          and "pvf-static-20261126h" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js
