@@ -325,10 +325,11 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261124m" in _sw.text
-          and "'/static/audio/alerta.wav'" in _sw.text
-          and "sound: '/static/audio/alerta.wav'" in _sw.text
-          and (_base_ui / "static" / "audio" / "alerta.wav").exists())
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261126a" in _sw.text
+          and "'/static/audio/alerta-fuerte.wav'" in _sw.text
+          and "sound: '/static/audio/alerta-fuerte.wav'" in _sw.text
+          and "silent: false" in _sw.text
+          and (_base_ui / "static" / "audio" / "alerta-fuerte.wav").exists())
     check("57. Buscador y filtros siempre visibles, sin plegable",
           'id="filter-toggle"' not in _menu_tpl and 'id="filter-panel"' not in _menu_tpl
           and 'id="search"' in _menu_tpl and 'id="cat-chips"' in _menu_tpl
@@ -344,7 +345,8 @@ def run() -> None:
           and "pvf-static-20261124f" not in _sw.text and "pvf-static-20261124g" not in _sw.text
           and "pvf-static-20261124h" not in _sw.text and "pvf-static-20261124i" not in _sw.text
           and "pvf-static-20261124j" not in _sw.text and "pvf-static-20261124k" not in _sw.text
-          and "pvf-static-20261124l" not in _sw.text and "pvf-static-20261124m" in _sw.text)
+          and "pvf-static-20261124l" not in _sw.text and "pvf-static-20261124m" not in _sw.text
+          and "pvf-static-20261126a" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -810,8 +812,19 @@ def run() -> None:
           and "function sonarAlarma()" in _admin_js
           and "AudioContext" in _admin_js
           and "sonarAlarma();" in _admin_js
-          and "sound: '/static/audio/alerta.wav'" in _admin_js,
+          and "sound: '/static/audio/alerta-fuerte.wav'" in _admin_js,
           clave_push.text)
+    check("141b. Volumen configurable y sonido más fuerte",
+          'id="volumen-estado"' in _admin_tpl and 'id="probar-sonido"' in _admin_tpl
+          and 'data-volumen="0"' in _admin_tpl and 'data-volumen="1"' in _admin_tpl
+          and ".volumen-btn.is-active" in _admin_css
+          and "pv_volumen_alerta" in _admin_js
+          and "function aplicarVolumenUI()" in _admin_js
+          and "function desbloquearAudio()" in _admin_js
+          and "guardado !== null" in _admin_js
+          and "alerta-fuerte.wav" in _admin_js and "silent: false" in _admin_js
+          and 'f"pvf-{numero}"' in (_base_ui / "push.py").read_text(encoding="utf-8")
+          and (_base_ui / "static" / "audio" / "alerta-fuerte.wav").stat().st_size > 20000)
     suscripcion = {"endpoint": "https://ejemplo.invalid/push/prueba-unica",
                    "p256dh": "clave-publica-de-prueba", "auth": "secreto-de-prueba"}
     alta_push = anonimo.post("/api/admin/push/suscribir", headers=admin_headers(),
@@ -895,7 +908,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261124m" in _sw.text)
+          and "pvf-static-20261126a" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js

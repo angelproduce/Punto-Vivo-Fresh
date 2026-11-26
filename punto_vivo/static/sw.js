@@ -1,12 +1,12 @@
 /* PUNTO VIVO FRESH · service worker para instalación como app */
-const CACHE = 'pvf-static-20261124m';
+const CACHE = 'pvf-static-20261126a';
 const ASSETS = [
   '/static/logo.png',
   '/static/css/styles.css',
   '/static/js/public.js',
   '/static/js/admin.js',
   '/static/js/install.js',
-  '/static/audio/alerta.wav',
+  '/static/audio/alerta-fuerte.wav',
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png',
 ];
@@ -57,7 +57,8 @@ self.addEventListener('push', (event) => {
       body: datos.body || '',
       tag: datos.tag || 'pvf-nuevo-pedido',
       data: { url: datos.url || '/admin' },
-      sound: '/static/audio/alerta.wav',
+      sound: '/static/audio/alerta-fuerte.wav',
+      silent: false,
       vibrate: [200, 100, 200, 100, 400],
       requireInteraction: true,
     })

@@ -163,6 +163,16 @@
       </div>
       <div class="panel">
         <div class="panel-head"><div><h2>Notificaciones del navegador</h2><p id="push-estado">Activa el permiso para recibir un aviso cuando llegue un pedido nuevo.</p></div></div>
+        <div class="volumen-alerta">
+          <div class="volumen-alerta-titulo"><strong>Volumen de la alarma</strong><span id="volumen-estado">Alto</span></div>
+          <div class="volumen-botones" role="group" aria-label="Volumen de la alarma">
+            <button type="button" class="btn btn-outline btn-sm volumen-btn" data-volumen="0" aria-pressed="false">🔇 Silenciado</button>
+            <button type="button" class="btn btn-outline btn-sm volumen-btn" data-volumen="0.35" aria-pressed="false">🔉 Bajo</button>
+            <button type="button" class="btn btn-outline btn-sm volumen-btn" data-volumen="0.65" aria-pressed="false">🔊 Medio</button>
+            <button type="button" class="btn btn-outline btn-sm volumen-btn" data-volumen="1" aria-pressed="false">📢 Alto</button>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="probar-sonido">▶️ Probar sonido</button>
+        </div>
         <button class="btn btn-primary btn-sm" id="push-activar" type="button">🔔 Activar notificaciones</button>
       </div>
     </section>

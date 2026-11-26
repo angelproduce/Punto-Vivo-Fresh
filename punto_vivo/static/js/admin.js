@@ -10,9 +10,24 @@
   let borrarModo = 'pedido';
   let comprobanteActualId = null;
   let ctxAlarma = null;
+  let audioAlerta = null;
 
-  // Alarma fuerte para pedidos nuevos. El primer clic del administrador
-  // habilita el audio, como exigen los navegadores.
+  // Volumen de la alarma, configurable en CONFIGURACIÓN → Notificaciones.
+  const VOLUMEN_KEY = 'pv_volumen_alerta';
+  const NIVELES_VOLUMEN = [
+    {valor: 0, etiqueta: 'Silenciado'},
+    {valor: 0.35, etiqueta: 'Bajo'},
+    {valor: 0.65, etiqueta: 'Medio'},
+    {valor: 1, etiqueta: 'Alto'},
+  ];
+  let volumenAlerta = 1;
+  try {
+    const guardado = localStorage.getItem(VOLUMEN_KEY);
+    if (guardado !== null && NIVELES_VOLUMEN.some((n) => n.valor === Number(guardado))) {
+      volumenAlerta = Number(guardado);
+    }
+  } catch (e) { /* almacenamiento bloqueado */ }
+
   function contextoAlarma() {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return null;
@@ -21,9 +36,19 @@
     return ctxAlarma;
   }
 
-  function sonarAlarma() {
+  function elementoAlarma() {
+    if (!audioAlerta) {
+      audioAlerta = new Audio('/static/audio/alerta-fuerte.wav');
+      audioAlerta.preload = 'auto';
+    }
+    audioAlerta.volume = volumenAlerta;
+    return audioAlerta;
+  }
+
+  // Respaldos con Web Audio si el navegador bloquea el archivo de sonido.
+  function sonarAlarmaWeb() {
     const ctx = contextoAlarma();
-    if (!ctx) return;
+    if (!ctx || volumenAlerta <= 0) return;
     const inicio = ctx.currentTime;
     [[880, 0, 0.14], [1175, 0.20, 0.14], [1568, 0.40, 0.22]].forEach(([frecuencia, retardo, duracion]) => {
       const osc = ctx.createOscillator();
@@ -31,7 +56,7 @@
       osc.type = 'square';
       osc.frequency.value = frecuencia;
       vol.gain.setValueAtTime(0.0001, inicio + retardo);
-      vol.gain.exponentialRampToValueAtTime(0.95, inicio + retardo + 0.02);
+      vol.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.95 * volumenAlerta), inicio + retardo + 0.02);
       vol.gain.exponentialRampToValueAtTime(0.0001, inicio + retardo + duracion);
       osc.connect(vol).connect(ctx.destination);
       osc.start(inicio + retardo);
@@ -39,8 +64,62 @@
     });
   }
 
+  function sonarAlarma() {
+    if (volumenAlerta <= 0) return;
+    const ctx = contextoAlarma();
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    const audio = elementoAlarma();
+    audio.currentTime = 0;
+    let reproduccion = null;
+    try { reproduccion = audio.play(); } catch (e) { reproduccion = null; }
+    if (reproduccion && typeof reproduccion.catch === 'function') {
+      reproduccion.catch(() => { sonarAlarmaWeb(); });
+    }
+  }
+
+  function desbloquearAudio() {
+    contextoAlarma();
+    const audio = elementoAlarma();
+    const volumen = audio.volume;
+    audio.volume = 0;
+    let reproduccion = null;
+    try { reproduccion = audio.play(); } catch (e) { reproduccion = null; }
+    if (reproduccion && typeof reproduccion.then === 'function') {
+      reproduccion.then(() => { audio.pause(); audio.currentTime = 0; audio.volume = volumen; })
+        .catch(() => { audio.volume = volumen; });
+    } else { audio.volume = volumen; }
+  }
+
+  // iOS solo permite audio tras un gesto del usuario: el primer toque lo habilita.
   ['pointerdown', 'keydown'].forEach((evento) =>
-    document.addEventListener(evento, () => { contextoAlarma(); }, { once: true, passive: true }));
+    document.addEventListener(evento, desbloquearAudio, { once: true, passive: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) contextoAlarma(); });
+
+  function aplicarVolumenUI() {
+    const nivel = NIVELES_VOLUMEN.find((n) => n.valor === volumenAlerta) || NIVELES_VOLUMEN[3];
+    const estado = $('volumen-estado');
+    if (estado) estado.textContent = nivel.etiqueta;
+    document.querySelectorAll('.volumen-btn').forEach((boton) => {
+      const activo = Number(boton.dataset.volumen) === volumenAlerta;
+      boton.classList.toggle('is-active', activo);
+      boton.setAttribute('aria-pressed', String(activo));
+    });
+    if (audioAlerta) audioAlerta.volume = volumenAlerta;
+  }
+  document.querySelectorAll('.volumen-btn').forEach((boton) => {
+    boton.addEventListener('click', () => {
+      volumenAlerta = Number(boton.dataset.volumen);
+      try { localStorage.setItem(VOLUMEN_KEY, String(volumenAlerta)); } catch (e) { /* ignorar */ }
+      aplicarVolumenUI();
+      if (volumenAlerta > 0) sonarAlarma();
+    });
+  });
+  $('probar-sonido')?.addEventListener('click', () => {
+    if (volumenAlerta <= 0) { toast('La alarma está silenciada.', true); return; }
+    sonarAlarma();
+    toast('Sonido de prueba reproducido');
+  });
+  aplicarVolumenUI();
 
   async function api(path, options = {}) {
     const opts = {...options};
@@ -372,8 +451,9 @@
           toast(`🔔 ${nuevos.length} pedido(s) nuevo(s) · ${nuevos[0].numero}`);
           if ('Notification' in window && Notification.permission === 'granted') {
             try { new Notification('🔔 Nuevo pedido · PUNTO VIVO FRESH', {
-              body: `${nuevos[0].numero} · ${nuevos[0].cliente}`, tag: 'pvf-nuevo-pedido',
-              sound: '/static/audio/alerta.wav', requireInteraction: true,
+              body: `${nuevos[0].numero} · ${nuevos[0].cliente}`,
+              tag: `pvf-${nuevos[0].numero}-${Date.now()}`,
+              sound: '/static/audio/alerta-fuerte.wav', silent: false, requireInteraction: true,
             }); } catch (e) { /* el aviso interno ya se mostró */ }
           }
         }
@@ -557,7 +637,7 @@
         return;
       }
       texto.textContent = Notification.permission === 'granted'
-        ? 'Notificaciones activas. Recibirás un aviso cuando llegue un pedido nuevo.'
+        ? 'Notificaciones activas. Prueba la alarma aquí; en segundo plano el sonido depende del volumen del teléfono.'
         : 'Pulsa el botón para permitir las notificaciones del navegador.';
     } catch (e) { texto.textContent = 'No se pudo consultar el estado de las notificaciones.'; }
   }

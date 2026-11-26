@@ -251,6 +251,12 @@ dialog.dialog-product,dialog.dialog-image{position:fixed;top:50%;left:50%;bottom
 .panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px}
 .panel-head h2{font-size:17px;margin:0 0 3px}
 .panel-head p{font-size:12px;color:var(--muted);margin:0}
+.volumen-alerta{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
+.volumen-alerta-titulo{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
+.volumen-alerta-titulo span{font-size:12px;font-weight:800;color:var(--verde-oscuro)}
+.volumen-botones{display:flex;flex-wrap:wrap;gap:8px}
+.volumen-btn{white-space:nowrap}
+.volumen-btn.is-active{background:var(--verde-oscuro);border-color:var(--verde-oscuro);color:#fff}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap}
 .toolbar input{border:1.5px solid var(--linea);border-radius:10px;padding:8px 11px;font-size:13px;outline:none;background:#fbfdfc}
 .toolbar input:focus{border-color:var(--verde)}

@@ -32,7 +32,7 @@ def notificar_nuevo_pedido(numero: str, cliente: str, total: Any) -> int:
         "title": "🔔 Nuevo pedido · PUNTO VIVO FRESH",
         "body": f"{numero} · {cliente} · RD$ {total}",
         "url": "/admin?section=pedidos",
-        "tag": "pvf-nuevo-pedido",
+        "tag": f"pvf-{numero}",
     })
     enviados = 0
     for suscripcion in repository.listar_suscripciones_push():
