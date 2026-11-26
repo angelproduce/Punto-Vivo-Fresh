@@ -152,7 +152,7 @@ Te pedirá la contraseña de forma segura. No pegues la service_role en el chat 
 | `Selecciona una cuenta bancaria disponible` | Completa titular y número y marca la cuenta activa en **CONFIGURACIÓN DE PAGOS**; los borradores no se publican. |
 | `El comprobante debe ser JPG, JPEG, PNG o PDF` | Revisa extensión y cabecera real del archivo, y que no supere 5 MB. |
 | No se ve el comprobante en el panel | El bucket `comprobantes` debe ser privado y las políticas RLS activadas; el admin lo abre desde **Pagos** o el detalle del pedido. |
-| No llegan notificaciones del navegador | Activa el permiso en **CONFIGURACIÓN DE PAGOS** y configura las tres variables `PV_VAPID_*`; sin ellas queda el aviso interno. |
+| No llegan notificaciones del navegador | Activa el permiso en **CONFIGURACIÓN DE PAGOS** y configura las tres variables `PV_VAPID_*`; sin ellas queda el aviso interno. En iPhone abre el panel instalado desde la pantalla de inicio y, si el permiso fue rechazado, reactívalo en **Ajustes → Notificaciones → Panel PVF**. |
 | `Producto no disponible o precio por definir` | Asigna precio real al producto desde **Administrar menú**; los 12 ejemplos DEMO tienen precio `0`. |
 | Primera petición lenta | Arranque en frío de Vercel Functions; normal en el plan gratuito. |
 
@@ -167,7 +167,7 @@ Te pedirá la contraseña de forma segura. No pegues la service_role en el chat 
 5. Solo los pedidos con pago `aprobado` cuentan como venta. El cliente ve el estado y la nota en **Mis pedidos**.
 6. Opcionalmente, activa las notificaciones del navegador desde **CONFIGURACIÓN DE PAGOS**. El botón emergente interno sigue funcionando aunque no haya permiso o claves VAPID.
 
-El service worker usa la caché `pvf-static-20261126b` y atiende los eventos `push` y `notificationclick` para abrir el panel al pulsar el aviso.
+El service worker usa la caché `pvf-static-20261126c` y atiende los eventos `push` y `notificationclick` para abrir el panel al pulsar el aviso. En iPhone el panel debe abrirse desde la pantalla de inicio (iOS 26: «Abrir como app web» activado); el permiso se pide con `pushManager.subscribe()` dentro del toque en «Activar notificaciones», nunca desde una pestaña de Safari.
 
 ---
 

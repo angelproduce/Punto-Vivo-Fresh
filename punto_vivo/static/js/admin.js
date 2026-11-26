@@ -657,29 +657,49 @@
     return Uint8Array.from(binario, (c) => c.charCodeAt(0));
   }
 
+  let clavePush = null;
+  let registroPush = null;
+
+  function esAppleMovil() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || ((navigator.platform === 'MacIntel' || /Macintosh/.test(navigator.userAgent)) && navigator.maxTouchPoints > 1);
+  }
+
+  function panelInstalado() {
+    return navigator.standalone === true
+      || window.matchMedia('(display-mode: standalone)').matches
+      || window.matchMedia('(display-mode: fullscreen)').matches;
+  }
+
   async function cargarEstadoPush() {
     const texto = $('push-estado');
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    const botonActivar = $('push-activar');
+    const botonProbar = $('push-probar');
+    // iOS solo permite Web Push en la app abierta desde la pantalla de inicio.
+    if (esAppleMovil() && !panelInstalado()) {
+      texto.textContent = 'En iPhone, pulsa «Instalar panel», ábrelo desde la pantalla de inicio y activa las notificaciones allí.';
+      if (botonActivar) botonActivar.disabled = true;
+      if (botonProbar) botonProbar.disabled = true;
+      return;
+    }
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
       texto.textContent = 'Este navegador no admite notificaciones del sistema.'; return;
     }
     try {
-      const d = await api('/api/admin/push/clave');
-      if (!d.configurado) {
+      // Se precarga antes del toque: iOS consume el gesto al mostrar el permiso.
+      if (!clavePush) clavePush = await api('/api/admin/push/clave');
+      if (!registroPush) registroPush = await navigator.serviceWorker.ready;
+      if (!clavePush.configurado) {
         texto.textContent = 'El servidor todavía no tiene las claves de notificación configuradas.';
         return;
       }
-      let suscrito = false;
-      try {
-        const registro = await navigator.serviceWorker.getRegistration();
-        suscrito = Boolean(registro && await registro.pushManager.getSubscription());
-      } catch (e) { /* aún no hay service worker */ }
-      const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      const instalada = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      const suscrito = Boolean(await registroPush.pushManager.getSubscription());
+      if (botonActivar) botonActivar.disabled = false;
+      if (botonProbar) botonProbar.disabled = false;
       if (Notification.permission === 'denied') {
-        texto.textContent = 'Permiso bloqueado. Actívalo en los ajustes del navegador y vuelve a entrar al panel.';
-      } else if (esIOS && !instalada) {
-        texto.textContent = 'En iPhone, pulsa «Instalar panel» y ábrelo desde la pantalla de inicio para recibir avisos.';
+        texto.textContent = esAppleMovil()
+          ? 'Permiso bloqueado. En Ajustes → Notificaciones → Panel PVF activa Notificaciones y Sonidos; luego vuelve a abrir el panel.'
+          : 'Permiso bloqueado. Actívalo en los ajustes del navegador y vuelve a entrar al panel.';
       } else if (Notification.permission === 'granted' && suscrito) {
         texto.textContent = 'Activo en este dispositivo. Pulsa «Enviar notificación de prueba» para comprobarlo.';
       } else {
@@ -703,15 +723,15 @@
       toast('Este navegador no admite notificaciones del sistema.', true); return;
     }
     try {
-      const permiso = await Notification.requestPermission();
-      if (permiso !== 'granted') { toast('Permiso de notificaciones no concedido.', true); return; }
-      const d = await api('/api/admin/push/clave');
-      if (!d.configurado) { toast('El servidor aún no tiene configuradas las claves push.', true); return; }
-      const registro = await navigator.serviceWorker.ready;
-      let suscripcion = await registro.pushManager.getSubscription();
+      // En iOS el permiso lo pide subscribe() desde este toque; pedirlo antes
+      // consume el gesto y puede dejar la suscripción sin conceder.
+      if (!clavePush) clavePush = await api('/api/admin/push/clave');
+      if (!registroPush) registroPush = await navigator.serviceWorker.ready;
+      if (!clavePush.configurado) { toast('El servidor aún no tiene configuradas las claves push.', true); return; }
+      let suscripcion = await registroPush.pushManager.getSubscription();
       if (!suscripcion) {
-        suscripcion = await registro.pushManager.subscribe({
-          userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(d.publica),
+        suscripcion = await registroPush.pushManager.subscribe({
+          userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(clavePush.publica),
         });
       }
       const clave = suscripcion.toJSON();
@@ -720,7 +740,11 @@
       }});
       toast('Notificaciones activadas para este dispositivo');
       cargarEstadoPush();
-    } catch (e) { toast(e.message, true); }
+    } catch (e) {
+      toast(Notification.permission === 'denied'
+        ? 'Permiso bloqueado. Actívalo en Ajustes → Notificaciones → Panel PVF.'
+        : e.message, true);
+    }
   });
   cargarEstadoPush();
 

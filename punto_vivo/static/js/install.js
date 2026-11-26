@@ -44,6 +44,7 @@
               <li><span class="pv-guide-num">3</span><span>Pulsa <strong>«Añadir»</strong> en la esquina superior derecha.</span></li>
             </ol>
             <p class="pv-guide-note">Abre esta página con <strong>Safari</strong>. Si la estás viendo en Chrome, Facebook u otra app, copia el enlace y ábrelo en Safari.</p>
+            <p class="pv-guide-note">Para recibir avisos con la app cerrada, abre siempre el icono de la pantalla de inicio (en iOS 26 deja activado «Abrir como app web») y pulsa <strong>Activar notificaciones</strong> dentro del panel.</p>
           </div>
           <div class="pv-guide-foot"><button class="btn btn-primary" type="button" id="pv-guide-ok">Entendido</button></div>
         </div>`;
