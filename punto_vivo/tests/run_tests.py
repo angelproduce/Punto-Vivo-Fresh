@@ -325,7 +325,7 @@ def run() -> None:
           and '{% block manifest_url %}/admin.webmanifest{% endblock %}' in _admin_login_tpl
           and '{% block manifest_url %}' in _base_tpl)
     check("56. Service worker incluye el instalador compartido",
-          "'/static/js/install.js'" in _sw.text and "pvf-static-20261126f" in _sw.text
+          "'/static/js/install.js'" in _sw.text and "pvf-static-20261126g" in _sw.text
           and "'/static/audio/alerta-fuerte.wav'" in _sw.text
           and "sound: '/static/audio/alerta-fuerte.wav'" in _sw.text
           and "silent: false" in _sw.text
@@ -348,7 +348,8 @@ def run() -> None:
           and "pvf-static-20261124l" not in _sw.text and "pvf-static-20261124m" not in _sw.text
           and "pvf-static-20261126a" not in _sw.text and "pvf-static-20261126b" not in _sw.text
           and "pvf-static-20261126c" not in _sw.text and "pvf-static-20261126d" not in _sw.text
-          and "pvf-static-20261126e" not in _sw.text and "pvf-static-20261126f" in _sw.text)
+          and "pvf-static-20261126e" not in _sw.text and "pvf-static-20261126f" not in _sw.text
+          and "pvf-static-20261126g" in _sw.text)
     check("60. Todas las categorías visibles sin deslizar",
           ".cat-chips{display:flex;flex:1 1 100%;flex-wrap:wrap;gap:8px;overflow:visible" in _admin_css)
     check("61. Botones del encabezado sin deslizar en móvil",
@@ -868,7 +869,8 @@ def run() -> None:
     estado_push = anonimo.get("/api/admin/push/estado", headers=admin_headers())
     check("146. Diagnóstico push sin exponer secretos",
           estado_push.status_code == 200
-          and {'configurado', 'suscripciones', 'destinos'} <= set(estado_push.json())
+          and {'configurado', 'libreria', 'publica_longitud', 'privada_longitud',
+               'publica_formato', 'privada_formato', 'suscripciones', 'destinos'} <= set(estado_push.json())
           and 'id="push-diagnostico"' in _admin_tpl
           and "/api/admin/push/estado" in _admin_js
           and "Última prueba:" in _admin_js
@@ -882,8 +884,13 @@ def run() -> None:
           and "document.addEventListener('visibilitychange'" in _admin_js
           and "method: 'POST', keepalive: true" in _admin_js
           and "par ${servidor.claves_coinciden ? 'correcto' : 'INCORRECTO'}" in _admin_js
+          and "Librería push:" in _admin_js
           and "ttl=3600" in (_base_ui / "push.py").read_text(encoding="utf-8")
           and 'headers={"Urgency": "high"}' in (_base_ui / "push.py").read_text(encoding="utf-8"))
+    _pyproject = (_base_ui.parent / "pyproject.toml").read_text(encoding="utf-8")
+    check("148. Vercel instala la librería push desde pyproject.toml",
+          "pywebpush>=2,<3" in _pyproject
+          and "Vercel instala desde pyproject.toml" in _pyproject)
 
     _menu_pedidos = client.get("/menu").text
     _public_js_pedidos = (_base_ui / "static" / "js" / "public.js").read_text(encoding="utf-8")
@@ -957,7 +964,7 @@ def run() -> None:
           and "Añadir a pantalla de inicio" in _install_js
           and "beforeinstallprompt" in _install_js
           and ".pv-guide-backdrop{" in _admin_css
-          and "pvf-static-20261126f" in _sw.text)
+          and "pvf-static-20261126g" in _sw.text)
     check("70. Botones para eliminar clientes",
           "data-delete-customer=" in _admin_js
           and "data-borrar-cliente=" in _admin_js

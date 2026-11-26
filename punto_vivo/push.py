@@ -78,8 +78,14 @@ def estado() -> dict[str, Any]:
         host = (urlparse(suscripcion["endpoint"]).hostname or "desconocido").lower()
         destinos[host] = destinos.get(host, 0) + 1
     subject = config.VAPID_SUBJECT.strip()
+    publica, privada = config.vapid_keys()
     return {
         "configurado": configurado(),
+        "libreria": webpush is not None,
+        "publica_longitud": len(publica),
+        "privada_longitud": len(privada),
+        "publica_formato": publica.startswith('B') and len(publica) >= 80,
+        "privada_formato": len(privada) >= 40,
         "claves_coinciden": _claves_coinciden(),
         "subject_valido": subject.startswith('https://') or subject.startswith('mailto:'),
         "suscripciones": len(suscripciones),

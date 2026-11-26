@@ -85,7 +85,7 @@ En el proyecto de Vercel: **Settings → Environment Variables**. Añade estas v
 1. Vercel → **Add New → Project** → importa el repositorio de GitHub.
 2. Deja **Root Directory** en la raíz del repo (no lo cambies).
 3. Vercel detecta el framework **FastAPI** solo (`pyproject.toml` declara las dependencias mínimas y `tool.vercel.entrypoint = "punto_vivo.app:app"`). No hay que escribir Build Command ni Start Command.
-   - El `requirements.txt` de la raíz pertenece al generador y **no se instala** en Vercel.
+   - El `requirements.txt` de la raíz pertenece al generador y **no se instala** en Vercel. Las notificaciones push dependen de `pywebpush`, declarado en `pyproject.toml`; si falta ahí, el diagnóstico dice «Librería push: FALTA».
 4. **Deploy**. En los logs debe aparecer Python 3.12 y la detección de FastAPI.
 5. Comprueba `https://<tu-proyecto>.vercel.app/healthz` → `{"status":"ok","app":"PUNTO VIVO FRESH"}`.
 
@@ -140,7 +140,7 @@ Te pedirá la contraseña de forma segura. No pegues la service_role en el chat 
 
 | Síntoma | Solución |
 |---|---|
-| `MODULE_NOT_FOUND` / `No module named fastapi` | Revisa que `pyproject.toml` conserve las 8 dependencias; Vercel prioriza ese archivo sobre `requirements.txt`. |
+| `MODULE_NOT_FOUND` / `No module named fastapi` | Revisa que `pyproject.toml` conserve las 9 dependencias (incluida `pywebpush`); Vercel prioriza ese archivo sobre `requirements.txt`. |
 | Todas las rutas dan 404 | Confirma Root Directory = raíz y `tool.vercel.entrypoint = "punto_vivo.app:app"`. |
 | `413 FUNCTION_PAYLOAD_TOO_LARGE` | La foto supera 4.5 MB. Reduce `PV_MAX_IMAGE_BYTES` a `4194304` y comprime la imagen antes de subirla. |
 | `Origen no permitido` (403) en el panel | `PV_TRUST_PROXY=1` y redeploy. |
@@ -152,7 +152,7 @@ Te pedirá la contraseña de forma segura. No pegues la service_role en el chat 
 | `Selecciona una cuenta bancaria disponible` | Completa titular y número y marca la cuenta activa en **CONFIGURACIÓN DE PAGOS**; los borradores no se publican. |
 | `El comprobante debe ser JPG, JPEG, PNG o PDF` | Revisa extensión y cabecera real del archivo, y que no supere 5 MB. |
 | No se ve el comprobante en el panel | El bucket `comprobantes` debe ser privado y las políticas RLS activadas; el admin lo abre desde **Pagos** o el detalle del pedido. |
-| No llegan notificaciones del navegador | Activa el permiso en **CONFIGURACIÓN DE PAGOS** y configura las tres variables `PV_VAPID_*`; sin ellas queda el aviso interno. En iPhone abre el panel instalado desde la pantalla de inicio y, si el permiso fue rechazado, reactívalo en **Ajustes → Notificaciones → Panel PVF**. |
+| No llegan notificaciones del navegador | Activa el permiso en **CONFIGURACIÓN DE PAGOS** y configura las tres variables `PV_VAPID_*`; sin ellas queda el aviso interno. Si el diagnóstico dice «Librería push: FALTA», falta `pywebpush` en `pyproject.toml`. En iPhone abre el panel instalado desde la pantalla de inicio y, si el permiso fue rechazado, reactívalo en **Ajustes → Notificaciones → Panel PVF**. |
 | `Producto no disponible o precio por definir` | Asigna precio real al producto desde **Administrar menú**; los 12 ejemplos DEMO tienen precio `0`. |
 | Primera petición lenta | Arranque en frío de Vercel Functions; normal en el plan gratuito. |
 

@@ -680,10 +680,14 @@
       return `${nombre}: ${total}`;
     }).join(', ') || 'ninguno';
     const permiso = ('Notification' in window) ? Notification.permission : 'no disponible';
+    const detalle = servidor.configurado ? '' : ` Librería push: ${servidor.libreria ? 'cargada' : 'FALTA'}. `
+      + `Clave pública: ${servidor.publica_longitud} caracteres (${servidor.publica_formato ? 'formato correcto' : 'formato incorrecto'}). `
+      + `Clave privada: ${servidor.privada_longitud} caracteres (${servidor.privada_formato ? 'formato correcto' : 'formato incorrecto'}).`;
     diag.textContent = `Diagnóstico · Servidor: ${servidor.configurado ? 'claves listas' : 'sin claves'}, `
       + `par ${servidor.claves_coinciden ? 'correcto' : 'INCORRECTO'}, `
-      + `remitente ${servidor.subject_valido ? 'válido' : 'INVÁLIDO'}. `
-      + `Dispositivos registrados: ${servidor.suscripciones} (${destinos}). `
+      + `remitente ${servidor.subject_valido ? 'válido' : 'INVÁLIDO'}.`
+      + detalle
+      + ` Dispositivos registrados: ${servidor.suscripciones} (${destinos}). `
       + `Aquí: permiso ${permiso}, ${instalada ? 'app instalada' : 'pestaña'}, `
       + `${suscrito ? 'suscrito' : 'sin suscripción'}, ${registro ? 'service worker activo' : 'sin service worker'}.`;
     diag.hidden = false;

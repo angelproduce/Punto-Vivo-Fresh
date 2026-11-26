@@ -181,7 +181,7 @@ set PYTHONPATH=%cd%\src;%cd%
 .venv\Scripts\python.exe -m punto_vivo.tests.run_tests
 ```
 
-Cubre 169 comprobaciones: cliente nuevo/existente, visitas, fechas/horas, doble envío, menú y QR, login/CSRF/bloqueo, productos, imágenes, CSV, PWA, carrito y checkout, validación de precios, idempotencia de pedidos, aislamiento entre clientes, estados, pago del administrador, ventas, rechazos, borrado de pedidos y ventas con contraseña, borrado de comprobantes con contraseña, perfiles, frecuentes, cierre de sesión del cliente, protección de datos y el flujo completo de transferencias (cuentas, comprobantes privados, estados de pago, auditoría, doble confirmación y notificaciones).
+Cubre 170 comprobaciones: cliente nuevo/existente, visitas, fechas/horas, doble envío, menú y QR, login/CSRF/bloqueo, productos, imágenes, CSV, PWA, carrito y checkout, validación de precios, idempotencia de pedidos, aislamiento entre clientes, estados, pago del administrador, ventas, rechazos, borrado de pedidos y ventas con contraseña, borrado de comprobantes con contraseña, perfiles, frecuentes, cierre de sesión del cliente, protección de datos y el flujo completo de transferencias (cuentas, comprobantes privados, estados de pago, auditoría, doble confirmación y notificaciones).
 
 ---
 
